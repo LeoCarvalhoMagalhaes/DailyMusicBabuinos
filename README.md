@@ -5,7 +5,7 @@
 os jogadores. Você ouve um trecho de 1 segundo e tem seis tentativas; a cada erro ou pulo, a
 música toca um pouco mais. O mascote **Babuíno do Rock** reage a cada jogada.
 
-*[Read in English](README.en.md)*
+**Jogue em https://leocarvalhomagalhaes.github.io/DailyMusicBabuinos/** · *[Read in English](README.en.md)*
 
 ![Tela inicial](docs/screenshots/inicio-desktop.png)
 
@@ -44,7 +44,7 @@ música toca um pouco mais. O mascote **Babuíno do Rock** reage a cada jogada.
 | Backend | Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, httpx, NumPy |
 | Banco | PostgreSQL (produção), SQLite (desenvolvimento e testes) |
 | Testes | pytest, Vitest + Testing Library, Playwright |
-| Deploy | Docker, Render Blueprint, GitHub Actions |
+| Deploy | GitHub Pages (site), Render Blueprint (API + PostgreSQL), Docker, GitHub Actions |
 
 ## Rodando localmente
 

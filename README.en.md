@@ -33,7 +33,7 @@ Portuguese.
 
 React 19 · TypeScript · Vite · React Router · CSS Modules — Python 3.13 · FastAPI ·
 Pydantic v2 · SQLAlchemy 2 · Alembic — PostgreSQL / SQLite — pytest · Vitest · Playwright —
-Docker · Render Blueprint · GitHub Actions.
+GitHub Pages (site) · Render Blueprint (API + PostgreSQL) · Docker · GitHub Actions.
 
 ## Running locally
 

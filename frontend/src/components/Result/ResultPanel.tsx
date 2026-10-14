@@ -5,7 +5,7 @@ import { useCountdown } from '../../hooks/useCountdown'
 import type { GameState } from '../../types/api'
 import { CATEGORY_THEMES } from '../../utils/categories'
 import { formatCountdown } from '../../utils/format'
-import { resultGrid, shareResult, shareText } from '../../utils/share'
+import { resultGrid, shareResult, shareText, siteUrl } from '../../utils/share'
 import styles from './ResultPanel.module.css'
 
 interface ResultPanelProps {
@@ -23,7 +23,7 @@ export function ResultPanel({ game, serverTime, onNewDay }: ResultPanelProps) {
   const [coverFailed, setCoverFailed] = useState(false)
 
   const share = async () => {
-    const outcome = await shareResult(shareText(game, window.location.origin))
+    const outcome = await shareResult(shareText(game, siteUrl()))
     if (outcome === 'cancelled') return
     setShareState(outcome)
     window.setTimeout(() => setShareState('idle'), 3000)

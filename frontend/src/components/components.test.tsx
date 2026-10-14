@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { HashRouter, MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import type { AudioPlayer as Player } from '../hooks/useAudioPlayer'
 import { WON_GAME, makeGame } from '../test/fixtures'
@@ -8,6 +8,7 @@ import { Attempts } from './Attempts/Attempts'
 import { AudioPlayer } from './AudioPlayer/AudioPlayer'
 import { CategoryCard } from './CategoryCard/CategoryCard'
 import { GuessInput } from './GuessInput/GuessInput'
+import { Layout } from './Layout/Layout'
 import { Mascot } from './Mascot/Mascot'
 import { ResultPanel } from './Result/ResultPanel'
 
@@ -207,5 +208,22 @@ describe('CategoryCard e Mascot', () => {
     expect(screen.getByRole('img', { name: /suando frio/ })).toHaveAttribute('data-mood', 'nervous')
     rerender(<Mascot mood="champion" />)
     expect(screen.getByRole('img', { name: /sinal do rock/ })).toBeInTheDocument()
+  })
+})
+
+describe('Layout', () => {
+  it('o link "Pular para o conteúdo" não muda a rota (rotas em #/ no GitHub Pages)', async () => {
+    window.location.hash = '#/desafio/rock'
+    render(
+      <HashRouter>
+        <Layout>
+          <p>conteúdo</p>
+        </Layout>
+      </HashRouter>,
+    )
+    await userEvent.click(screen.getByRole('link', { name: 'Pular para o conteúdo' }))
+    expect(window.location.hash).toBe('#/desafio/rock')
+    expect(screen.getByRole('main')).toHaveFocus()
+    window.location.hash = ''
   })
 })

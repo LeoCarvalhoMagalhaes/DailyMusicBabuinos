@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { WON_GAME, makeGame } from '../test/fixtures'
 import { formatChallengeDate, formatCountdown, formatSeconds, formatShortDate } from './format'
 import { moodForGame } from './mascot'
-import { resultGrid, shareResult, shareText } from './share'
+import { resultGrid, shareResult, shareText, siteUrl } from './share'
 
 describe('compartilhamento', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -95,5 +95,13 @@ describe('humor do mascote', () => {
     expect(moodForGame({ ...wrong, remaining_attempts: 2 }, false)).toBe('nervous')
     expect(moodForGame(WON_GAME, false)).toBe('win')
     expect(moodForGame(makeGame({ status: 'lost' }), false)).toBe('lose')
+  })
+})
+
+describe('endereço do jogo no compartilhamento', () => {
+  it('inclui a subpasta do site (GitHub Pages), não só a origem', () => {
+    // Nos testes a base é "/"; no Pages, VITE_BASE_PATH=/DailyMusicBabuinos/.
+    expect(siteUrl()).toBe(new URL(import.meta.env.BASE_URL, window.location.origin).href)
+    expect(siteUrl().endsWith('/')).toBe(true)
   })
 })

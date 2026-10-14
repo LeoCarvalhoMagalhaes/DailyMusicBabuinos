@@ -9,9 +9,13 @@
 | --- | --- | --- |
 | API (FastAPI) | **Render** — Web Service com Docker, plano Free | Fly.io, Railway, Koyeb (verifique os planos atuais) |
 | Banco PostgreSQL | **Neon** (Free, sem data de expiração) ou Render Postgres Free (expira em 30 dias) | Supabase |
-| Frontend estático | **Render Static Site** ou **Cloudflare Pages** | Netlify, Vercel (Hobby só para uso pessoal e não comercial) |
+| Frontend estático | **GitHub Pages** (como os outros jogos do autor) | Cloudflare Pages, Netlify, Render Static Site, Vercel (Hobby só para uso pessoal e não comercial) |
 
-O arquivo [`render.yaml`](../render.yaml) cria API, site e banco de uma vez (Blueprint).
+Publicação escolhida: o site fica em **https://leocarvalhomagalhaes.github.io/DailyMusicBabuinos/**
+(workflow [`pages.yml`](../.github/workflows/pages.yml)) e a API no Render
+([`render.yaml`](../render.yaml), Blueprint com API e banco). O GitHub Pages só serve arquivos
+estáticos; o servidor continua necessário porque guarda a resposta em segredo, valida os
+palpites, corta o áudio e mantém as estatísticas.
 
 ## Limitações dos planos gratuitos (o que esperar)
 
@@ -30,8 +34,8 @@ Consequências para o jogo:
   horas de instância.
 - Com uma única instância, o limitador de requisições e o cache de prévias ficam em memória
   e zeram quando a API reinicia (comportamento esperado).
-- Se usar Render Postgres Free, **faça backup e migre antes de 30 dias** (ou use Neon desde
-  o início).
+- O `render.yaml` usa o Render Postgres Free, que **expira 30 dias após a criação**. Faça
+  backup e migre para o Neon antes disso (ou use o Neon desde o início; veja abaixo).
 
 ## Variáveis de ambiente
 
@@ -43,7 +47,7 @@ Consequências para o jogo:
 | `DATABASE_URL` | URL do PostgreSQL | `postgres://` e `postgresql://` são aceitas. Neon exige `?sslmode=require` na URL (já vem assim no painel). |
 | `CHALLENGE_SECRET` | valor aleatório (≥ 32 caracteres) | **Nunca mude depois de lançar**: os desafios já gravados continuam, mas a ordem dos próximos muda. `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `AUDIO_PROVIDER` | `deezer` (ou `local`/`demo`) | `demo` mantém o modo demonstração. |
-| `CORS_ORIGINS` | URL do frontend | Ex.: `https://musicas-babuinas.onrender.com`. Várias separadas por vírgula. |
+| `CORS_ORIGINS` | origem do frontend | No GitHub Pages: `https://leocarvalhomagalhaes.github.io` (sem o caminho). Várias separadas por vírgula. |
 | `CHALLENGE_TIMEZONE` | `America/Sao_Paulo` | Fuso da virada diária. |
 | `LAUNCH_DATE` | data do lançamento | Define o "Desafio #1". |
 | `CLIP_STAGES_SECONDS`, `SCORE_TABLE` | opcional | Mesma quantidade de itens. |
@@ -53,31 +57,46 @@ Consequências para o jogo:
 
 | Variável | Valor | Observação |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | URL pública da API, sem barra final | Lida **no build**. Em desenvolvimento fica vazia (o Vite faz proxy de `/api`). |
+| `VITE_API_BASE_URL` | URL pública da API, sem barra final | Lida **no build**. Em desenvolvimento fica vazia (o Vite faz proxy de `/api`). No GitHub Pages vem da variável do repositório `API_BASE_URL`. |
+| `VITE_BASE_PATH` | `/DailyMusicBabuinos/` no GitHub Pages | Subpasta onde o site é servido. Padrão `/`. |
+| `VITE_ROUTER` | `hash` no GitHub Pages | Rotas em `#/` (o Pages não reescreve `/desafio/rock` para o `index.html`). Padrão: rotas normais. |
 
 Nenhuma credencial real é versionada. O Deezer não exige chave de API.
 
-## Passo a passo — Render (Blueprint)
+## Passo a passo — GitHub Pages + Render
 
-1. Faça o push do repositório para o GitHub.
-2. No Render: **New → Blueprint**, escolha o repositório. O Render lê `render.yaml` e cria
-   `musicas-babuinas-db`, `musicas-babuinas-api` e `musicas-babuinas`.
-3. Se os nomes ficarem diferentes (URLs já em uso), ajuste:
-   - na API, `CORS_ORIGINS` = URL do site;
-   - no site, `VITE_API_BASE_URL` = URL da API, e dispare um novo deploy do site (a variável
-     entra no build).
-4. A API aplica as migrações (`alembic upgrade head`) e sincroniza o catálogo ao iniciar.
-5. Verifique:
+1. **API no Render:** entre em <https://render.com> com a conta do GitHub, escolha
+   **New → Blueprint** e o repositório `DailyMusicBabuinos` (branch `main`). O Render lê o
+   `render.yaml` e cria `musicas-babuinas-db` e `musicas-babuinas-api`, já com
+   `CHALLENGE_SECRET` gerado e `CORS_ORIGINS` apontando para o GitHub Pages.
+2. A API aplica as migrações e sincroniza o catálogo ao iniciar. Verifique:
    ```bash
-   curl https://SUA-API.onrender.com/api/health
+   curl https://musicas-babuinas-api.onrender.com/api/health
    # {"status":"ok","database":"ok","audio_provider":"deezer","catalog_edition":"main",...}
    ```
-6. Valide o Deezer no ambiente publicado (Render → API → **Shell**):
+   Se o Render der outro nome à API (URL já em uso), use a URL que ele mostrar nos passos
+   seguintes.
+3. **Site no GitHub Pages:** em *Settings → Pages* do repositório, escolha a fonte
+   **GitHub Actions** e defina a URL da API:
    ```bash
-   python -m app.cli check-audio --limit 600  # resumo por categoria no fim
-   python -m app.cli publish-today            # publica os 6 desafios do dia
+   gh api -X POST repos/LeoCarvalhoMagalhaes/DailyMusicBabuinos/pages -f build_type=workflow
+   gh variable set API_BASE_URL --body https://musicas-babuinas-api.onrender.com
+   gh workflow run pages.yml          # ou faça um push na main
    ```
-7. Abra o site, jogue uma categoria no celular e no computador, e compartilhe um resultado.
+4. **Áudio no ambiente publicado:** o plano gratuito do Render não tem Shell. Rode daqui,
+   com a *External Database URL* do banco (painel do Render → `musicas-babuinas-db`):
+   ```bash
+   cd backend
+   DATABASE_URL="postgresql://...render.com/babuinos" python -m app.cli check-audio --limit 600
+   ```
+   O `publish-today` é opcional: a API cria os desafios do dia no primeiro acesso. Se for
+   rodá-lo daqui, use o mesmo `CHALLENGE_SECRET` do Render (painel → API → Environment).
+5. Abra <https://leocarvalhomagalhaes.github.io/DailyMusicBabuinos/>, jogue uma categoria no
+   celular e no computador e compartilhe um resultado. O primeiro acesso depois de 15 min
+   parado leva cerca de 1 min (a API gratuita acorda).
+
+Se o domínio do site mudar (outro usuário do GitHub ou domínio próprio), ajuste
+`CORS_ORIGINS` na API e, para domínio próprio na raiz, `VITE_BASE_PATH=/`.
 
 ### Usando Neon em vez do Postgres do Render
 

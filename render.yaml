@@ -1,7 +1,8 @@
 # Blueprint do Render (https://render.com/docs/blueprint-spec).
-# Cria: API (Docker), site estático do frontend e PostgreSQL gratuito.
-# Depois do primeiro deploy, confira as URLs geradas e ajuste CORS_ORIGINS e
-# VITE_API_BASE_URL se os nomes dos serviços forem diferentes.
+# Cria a API (Docker) e um PostgreSQL gratuito. O frontend é publicado no GitHub Pages
+# (.github/workflows/pages.yml), por isso a API só aceita chamadas dessa origem.
+# Atenção: o PostgreSQL gratuito do Render expira 30 dias após a criação; para guardar as
+# estatísticas por mais tempo, use o Neon (ver docs/05-implantacao.md).
 databases:
   - name: musicas-babuinas-db
     plan: free
@@ -23,32 +24,13 @@ services:
         fromDatabase:
           name: musicas-babuinas-db
           property: connectionString
+      # Gerado pelo Render (aleatório e forte). Nunca troque depois do lançamento.
       - key: CHALLENGE_SECRET
         generateValue: true
       - key: AUDIO_PROVIDER
         value: deezer
       - key: CHALLENGE_TIMEZONE
         value: America/Sao_Paulo
+      # Origem do GitHub Pages (sem o caminho /DailyMusicBabuinos/).
       - key: CORS_ORIGINS
-        value: https://musicas-babuinas.onrender.com
-
-  - type: web
-    name: musicas-babuinas
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_BASE_URL
-        value: https://musicas-babuinas-api.onrender.com
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    headers:
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
+        value: https://leocarvalhomagalhaes.github.io

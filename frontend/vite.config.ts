@@ -6,6 +6,8 @@ import { defineConfig } from 'vite'
 const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://127.0.0.1:8000'
 
 export default defineConfig({
+  // GitHub Pages serve o site em /<repositório>/ (VITE_BASE_PATH=/DailyMusicBabuinos/).
+  base: process.env.VITE_BASE_PATH ?? '/',
   plugins: [react()],
   server: {
     port: 5173,

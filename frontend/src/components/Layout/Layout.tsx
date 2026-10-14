@@ -76,12 +76,22 @@ function Footer() {
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
-      <a href="#conteudo" className={styles.skip}>
+      <a
+        href="#conteudo"
+        className={styles.skip}
+        onClick={(event) => {
+          // Com rotas em "#/" (GitHub Pages), mudar o hash trocaria de página.
+          event.preventDefault()
+          const main = document.getElementById('conteudo')
+          main?.focus()
+          main?.scrollIntoView()
+        }}
+      >
         Pular para o conteúdo
       </a>
       <Header />
       <OfflineBanner />
-      <main id="conteudo" className={styles.main}>
+      <main id="conteudo" className={styles.main} tabIndex={-1}>
         {children}
       </main>
       <Footer />

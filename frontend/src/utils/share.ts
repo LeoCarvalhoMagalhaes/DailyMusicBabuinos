@@ -5,6 +5,12 @@ import { CATEGORY_THEMES } from './categories'
 
 export const SITE_URL = import.meta.env.VITE_PUBLIC_SITE_URL ?? ''
 
+/** Endereço do jogo para o texto de compartilhamento. No GitHub Pages o site fica numa
+ * subpasta (ex.: /DailyMusicBabuinos/), então a origem sozinha não basta. */
+export function siteUrl(): string {
+  return SITE_URL || new URL(import.meta.env.BASE_URL, window.location.origin).href
+}
+
 /** Uma célula por tentativa: 🟥 erro, ⬜ pulou, 🟩 acerto, ⬛ não usada. */
 export function resultGrid(game: Pick<GameState, 'guesses' | 'max_attempts'>): string {
   const cells: string[] = game.guesses.map((g) => (g.correct ? '🟩' : g.skipped ? '⬜' : '🟥'))

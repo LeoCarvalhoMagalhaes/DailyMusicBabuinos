@@ -1,6 +1,6 @@
 import { Component, useEffect } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router'
+import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router'
 import { Layout } from './components/Layout/Layout'
 import { Mascot } from './components/Mascot/Mascot'
 import { PlayerProvider } from './hooks/usePlayer'
@@ -58,9 +58,13 @@ export function AppRoutes() {
   )
 }
 
+// No GitHub Pages não há reescrita de rotas para o index.html: lá as rotas ficam em "#/"
+// (VITE_ROUTER=hash no build). Em outros hosts, rotas normais.
+const Router = import.meta.env.VITE_ROUTER === 'hash' ? HashRouter : BrowserRouter
+
 export function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <ScrollToTop />
       <PlayerProvider>
         <Layout>
@@ -69,6 +73,6 @@ export function App() {
           </ErrorBoundary>
         </Layout>
       </PlayerProvider>
-    </BrowserRouter>
+    </Router>
   )
 }
