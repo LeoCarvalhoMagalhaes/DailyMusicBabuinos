@@ -1,0 +1,296 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.header svg {
+  flex: none;
+  width: 96px;
+  height: auto;
+}
+
+.title {
+  font-size: clamp(28px, 7vw, 40px);
+  margin: 4px 0 8px;
+}
+
+.lead {
+  color: var(--text-muted);
+  max-width: 560px;
+}
+
+.stale {
+  color: var(--amber);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 14px;
+  scrollbar-width: thin;
+}
+
+.tab {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.tabActive {
+  background: rgb(139 92 246 / 0.2);
+  border-color: var(--purple);
+  color: var(--text);
+}
+
+.overview {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .overview {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: start;
+  }
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 0;
+}
+
+@media (min-width: 560px) {
+  .tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 7 indicadores: o último ocupa duas colunas para fechar a grade. */
+.tile:last-child {
+  grid-column: span 2;
+}
+
+.tile {
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.tile dt {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.tile dd {
+  margin: 4px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile dd svg {
+  color: var(--orange);
+}
+
+.chart {
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.chartTitle {
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 18px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+}
+
+.barLabel {
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.barTrack {
+  height: 22px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.04);
+  overflow: hidden;
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--grad-stage);
+  transition: width 0.5s var(--ease-out);
+}
+
+.barLoss {
+  background: var(--surface-3);
+}
+
+.barValue {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+}
+
+.section {
+  margin-top: 28px;
+  display: grid;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 22px;
+}
+
+.catGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+}
+
+.catCard {
+  --accent: var(--purple);
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+}
+
+.catName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.catLine {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.catLine strong {
+  color: var(--text);
+}
+
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.historyRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.historyIcon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.won .historyIcon {
+  color: var(--success);
+  background: rgb(74 222 128 / 0.12);
+}
+
+.lost .historyIcon {
+  color: var(--danger);
+  background: rgb(244 63 94 / 0.12);
+}
+
+.in_progress .historyIcon {
+  color: var(--amber);
+}
+
+.historyMain {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+
+.historyTitle {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.historyMeta {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.historyScore {
+  flex: none;
+  display: grid;
+  justify-items: end;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.historyScore strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.historyAttempts {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.empty {
+  color: var(--text-muted);
+}

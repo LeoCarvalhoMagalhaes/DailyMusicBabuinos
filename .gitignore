@@ -6,6 +6,8 @@ __pycache__/
 .ruff_cache/
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 .audio-cache/
 
 # Node

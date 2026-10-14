@@ -1,0 +1,113 @@
+.card {
+  --accent: var(--purple);
+  --glow: rgb(139 92 246 / 0.35);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  min-height: 178px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(140% 90% at 100% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
+    var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  transition:
+    transform 0.2s var(--ease-out),
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.card::before {
+  /* faixa de luz de palco no topo */
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  box-shadow: 0 14px 40px var(--glow);
+}
+
+.done {
+  background:
+    radial-gradient(140% 90% at 100% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--bg-elev);
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.badgeNew {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+
+.badgeProgress {
+  background: rgb(251 191 36 / 0.16);
+  color: var(--amber);
+}
+
+.badgeWon {
+  background: rgb(74 222 128 / 0.15);
+  color: var(--success);
+}
+
+.badgeLost {
+  background: rgb(244 63 94 / 0.15);
+  color: var(--danger);
+}
+
+.name {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 20px;
+  margin-top: 6px;
+}
+
+.tagline {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex: 1;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 15px;
+}

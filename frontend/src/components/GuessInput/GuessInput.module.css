@@ -1,0 +1,120 @@
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.field {
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 44px 0 44px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-elev);
+  font-size: 17px; /* >= 16px evita o zoom automático do iOS */
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 4px rgb(139 92 246 / 0.25);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.spinner {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  margin-top: -9px;
+  color: var(--text-faint);
+}
+
+/* Sugestões abrem para cima: no celular o teclado virtual ocupa a parte de baixo. */
+.list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 15;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: min(320px, 45dvh);
+  overflow-y: auto;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 -12px 40px rgb(0 0 0 / 0.5);
+  animation: fade-up 0.18s var(--ease-out);
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.option:hover,
+.optionActive {
+  background: rgb(139 92 246 / 0.22);
+}
+
+.optionTitle {
+  font-weight: 600;
+}
+
+.optionArtist {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.empty {
+  padding: 10px 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+}
+
+.skipExtra {
+  display: none;
+}
+
+@media (min-width: 420px) {
+  .skipExtra {
+    display: inline;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+}
