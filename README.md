@@ -24,6 +24,8 @@ música toca um pouco mais. O mascote **Babuíno do Rock** reage a cada jogada.
   metadados.
 - **Respostas tolerantes:** acentos, maiúsculas, pontuação, aliases e pequenos erros de
   digitação, sem confundir músicas parecidas.
+- **Músicas reais, por partes:** a lista sai dos streams do Spotify (kworb) e o jogo toca
+  trechos crescentes da gravação original; no fim, link para ouvir no Spotify.
 - **Estatísticas completas:** taxa de acerto, pontos, média, sequência de dias, distribuição
   por tentativa, desempenho por gênero e histórico.
 - **Compartilhamento sem spoiler** com Web Share API e fallback de cópia.
@@ -49,7 +51,7 @@ música toca um pouco mais. O mascote **Babuíno do Rock** reage a cada jogada.
 Pré-requisitos: Python 3.11+ e Node.js 20+.
 
 ```bash
-# 1) API (modo demonstração, SQLite, sem credenciais)
+# 1) API (SQLite, sem credenciais)
 cd backend
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
@@ -68,9 +70,16 @@ As migrações e a carga do catálogo rodam automaticamente quando a API inicia.
 **Com PostgreSQL via Docker Compose:** `docker compose up --build` sobe banco e API;
 depois rode o frontend com `npm run dev`.
 
-**Com as prévias reais do Deezer:** defina `AUDIO_PROVIDER=deezer` no `backend/.env`
-(precisa de acesso à internet; não exige chave de API). O jogo passa a usar o catálogo
-principal de 6 × 100 músicas.
+**Músicas reais (padrão):** o jogo toca trechos das gravações originais (prévias oficiais do
+Deezer), com o catálogo principal de 6 × 100 músicas. Precisa de internet e não exige chave
+de API. Sem internet, use `AUDIO_PROVIDER=demo` no `backend/.env` (melodias sintetizadas).
+
+**Catálogo com as músicas mais ouvidas no Spotify:** gere as listas a partir dos dados do
+kworb (uma vez, ~10 min):
+
+```bash
+cd backend && python -m app.cli import-kworb && python -m app.cli check-audio --limit 100
+```
 
 ### Ferramentas de operação
 
@@ -80,17 +89,18 @@ python -m app.cli publish-today              # publica os desafios de hoje
 python -m app.cli check-audio --limit 20     # valida prévias no provedor
 python -m app.cli reveal --category rock     # mostra a resposta de hoje (suporte)
 python -m app.cli sync-catalog               # recarrega o catálogo JSON
+python -m app.cli import-kworb               # catálogo a partir dos streams do Spotify (kworb)
 python -m app.cli purge-inactive --days 400  # retenção de dados
 ```
 
 ## Testes
 
 ```bash
-cd backend && pytest                                   # 107 testes (SQLite)
+cd backend && pytest                                   # 124 testes (SQLite)
 TEST_DATABASE_URL=postgresql://user:senha@localhost:5432/babuinos_test pytest   # mesmos testes no PostgreSQL
 
 cd frontend
-npm run typecheck && npm test                          # 27 testes Vitest
+npm run typecheck && npm test                          # 28 testes Vitest
 npx playwright install chromium                        # uma vez
 npm run e2e                                            # 12 testes E2E (desktop + celular)
 ```
@@ -110,10 +120,14 @@ jogam partidas completas e verificam que não há rolagem horizontal no celular.
 
 ## Sobre o áudio e o catálogo (importante)
 
-- O **modo demonstração** (padrão) usa melodias em domínio público com arranjos sintetizados
-  pelo próprio jogo. Ele é sinalizado na interface e **não** é o catálogo definitivo.
-- O **catálogo principal** é uma **curadoria editorial** documentada de 100 músicas por
-  categoria — não um ranking oficial, e sem posições numéricas inventadas.
+- **Lista de músicas:** as mais ouvidas no Spotify, segundo os dados públicos do kworb.net
+  (`python -m app.cli import-kworb`), com posição, fonte e data registradas. Até rodar o
+  importador, vale uma curadoria editorial documentada (sem posições inventadas).
+- **Áudio:** trechos da gravação original, por partes, vindos das prévias oficiais do Deezer.
+  O Spotify não é usado como fonte de áudio porque a política para desenvolvedores dele
+  proíbe jogos e quizzes.
+- O **modo demonstração** (`AUDIO_PROVIDER=demo`) é só para uso offline: melodias em domínio
+  público sintetizadas pelo próprio jogo, sinalizadas na interface.
 - As prévias do Deezer seguem os termos para desenvolvedores do Deezer (uso pessoal, com
   atribuição). Para uso comercial, contate o Deezer ou use áudio licenciado (`AUDIO_PROVIDER=local`).
 

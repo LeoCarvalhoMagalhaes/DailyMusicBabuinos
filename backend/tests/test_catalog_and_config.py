@@ -110,8 +110,8 @@ def test_settings_validation() -> None:
                  cors_origins="https://a.com, https://b.com")
     assert s.database_url == "postgresql+psycopg://u:p@host:5432/db"
     assert s.cors_origins == ["https://a.com", "https://b.com"]
-    assert s.catalog_edition == "demo"
-    assert Settings(_env_file=None, audio_provider="deezer").catalog_edition == "main"
+    assert s.audio_provider == "deezer" and s.catalog_edition == "main"  # gravações reais
+    assert Settings(_env_file=None, audio_provider="demo").catalog_edition == "demo"
 
 
 def test_health_and_security_headers(harness: Harness) -> None:

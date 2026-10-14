@@ -15,8 +15,8 @@ Selecionado por `AUDIO_PROVIDER`:
 
 | Valor | Catálogo | Fonte | Precisa de rede/credenciais |
 | --- | --- | --- | --- |
-| `demo` (padrão) | edição `demo` (27 melodias) | síntese própria de composições em domínio público | não |
-| `deezer` | edição `main` (6 × 100) | prévias de 30 s da API pública do Deezer | rede; sem chave de API |
+| `deezer` (padrão) | edição `main` (6 × 100) | trechos da gravação original, das prévias de 30 s da API pública do Deezer | rede; sem chave de API |
+| `demo` (offline) | edição `demo` (27 melodias) | síntese própria de composições em domínio público | não |
 | `local` | edição `main` | arquivos `AUDIO_LOCAL_DIR/<slug>.mp3` ou `.wav` licenciados por você | não |
 
 Trocar de provedor não muda nenhuma regra do jogo.
@@ -42,11 +42,25 @@ Trocar de provedor não muda nenhuma regra do jogo.
   provedor foi testado com respostas simuladas fiéis ao formato da API. Valide no primeiro
   deploy com `python -m app.cli check-audio --limit 20`.
 
-### Outras fontes avaliadas
+### Por que o áudio não vem do Spotify
 
-- **Spotify Web API:** o campo `preview_url` deixou de ser preenchido para apps criados (ou em
-  modo de desenvolvimento) a partir de 27/11/2024, segundo a comunidade oficial de
-  desenvolvedores. Descartado.
+As músicas do jogo são escolhidas pelos dados do Spotify (veja "Catálogo principal"), mas o
+**áudio não pode vir do Spotify**:
+
+- A [Política para Desenvolvedores do Spotify](https://developer.spotify.com/policy/), em vigor
+  desde 15/05/2025, lista entre as aplicações proibidas: *"Do not create a game, including
+  trivia quizzes"*. Isso vale para a Web API, o Web Playback SDK e os embeds.
+- O campo `preview_url` deixou de ser preenchido para apps novos desde 27/11/2024.
+- Apps em modo de desenvolvimento aceitam só 5 usuários cadastrados à mão e exigem conta
+  Premium; o modo ampliado é só para empresas com ao menos 250 mil usuários ativos por mês
+  ([quota modes](https://developer.spotify.com/documentation/web-api/concepts/quota-modes)).
+- O player do Spotify mostra o nome da faixa ao navegador, o que entregaria a resposta.
+
+Por isso o jogo toca **a gravação original, por partes**, a partir da prévia oficial do
+Deezer da mesma música (busca por título e artista), e usa o Spotify apenas como fonte da
+lista e como link "Ouvir no Spotify" no fim da partida.
+
+### Outras fontes avaliadas
 - **iTunes Search API (Apple):** oferece prévias, mas a documentação não pôde ser consultada
   deste ambiente e o uso é condicionado a fins promocionais com link para a loja. Pode virar
   um `ItunesProvider` com a mesma interface.
@@ -80,6 +94,48 @@ cabeçalhos identifica a música.
 - O catálogo demo **não** é o catálogo definitivo do jogo.
 
 ## Catálogo principal
+
+### Gerar a partir do Spotify (kworb) — recomendado
+
+O [kworb.net](https://kworb.net/spotify/) publica as contagens de streams do Spotify por
+música e por artista. O importador lê essas páginas públicas e grava os JSON do catálogo com
+fonte do tipo `chart`, posição, data da consulta, número de streams e o id da faixa no Spotify.
+
+```bash
+cd backend
+python -m app.cli import-kworb                 # todas as categorias (~10 min na 1ª vez)
+python -m app.cli import-kworb --categories geral rock --delay 3
+python -m app.cli check-audio --limit 100      # confere quais têm prévia no Deezer
+python -m app.cli sync-catalog                 # ou reinicie a API
+```
+
+Como as listas são montadas:
+
+| Categoria | Origem | Posição |
+| --- | --- | --- |
+| Geral | [lista global de mais tocadas de todos os tempos](https://kworb.net/spotify/songs.html) | a do kworb |
+| Rock, Pop, Rap, Country, Eletrônica | páginas de músicas de cada artista da categoria no kworb | ordem por total de streams dentro da categoria |
+
+- O kworb não classifica gênero. Os artistas de cada categoria estão em
+  `backend/app/data/kworb_seeds.json` (lista editorial, editável). Se um artista não for
+  encontrado, o importador avisa; fixe o id com `"Nome|idDoArtistaNoSpotify"`.
+- Regras: só músicas em que o artista é o principal, no máximo 3 por artista
+  (`--max-per-artist`), sem títulos repetidos, títulos limpos de sufixos como
+  "- Remastered 2011" e "(feat. …)" (o título original vira alias).
+- O importador só grava se todas as categorias pedidas tiverem 100 faixas (ou use
+  `--allow-partial`); nada fica pela metade.
+- Boas maneiras: uma requisição por vez, 2 s de intervalo (`--delay`), cache local em
+  `.kworb-cache/` e User-Agent identificado. O kworb não tem API nem termos específicos para
+  esse uso: rode o importador raramente (por exemplo, uma vez por mês) e mantenha o crédito
+  ao site.
+- Limitação: **o importador não pôde ser executado contra o kworb real neste ambiente**
+  (acesso bloqueado). Ele foi testado com páginas simuladas no formato das tabelas do kworb;
+  se o site mudar o layout, o importador para com uma mensagem clara em vez de gravar dados
+  errados.
+
+### Curadoria editorial (catálogo inicial)
+
+Enquanto o importador não é executado, vale o catálogo editorial abaixo.
 
 - Arquivos: `backend/app/data/catalog/{rock,pop,rap,country,eletronica,geral}.json`.
 - 100 faixas por categoria, 545 faixas únicas (a categoria Geral compartilha 55 faixas com as

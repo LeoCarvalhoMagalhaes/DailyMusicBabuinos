@@ -91,7 +91,7 @@ Avaliação das fontes (detalhes em [03-audio-e-catalogo.md](03-audio-e-catalogo
 | Fonte | Situação verificada | Decisão |
 | --- | --- | --- |
 | **Deezer API pública** | Prévias oficiais de ~30 s em MP3, sem chave de API. Termos para desenvolvedores: uso gratuito para páginas e aplicações pessoais, com atribuição; uso comercial requer contato com o Deezer. | **Provedor principal.** |
-| Spotify Web API | `preview_url` deixou de ser retornado para apps novos desde 27/11/2024 (relatos na comunidade oficial). | Descartado. |
+| Spotify | A política para desenvolvedores (15/05/2025) proíbe jogos e quizzes; `preview_url` não é retornado para apps novos desde 27/11/2024; modo de desenvolvimento limitado a 5 usuários Premium. | **Fonte da lista de músicas** (streams via kworb) e link "Ouvir no Spotify"; **não** é fonte de áudio. |
 | iTunes Search API | Oferece prévias, mas a documentação não pôde ser consultada deste ambiente e os termos exigem uso promocional com link para a loja. | Alternativa futura, via a mesma interface. |
 | YouTube / scraping | Extrair áudio viola os termos de uso. | Proibido. |
 | Arquivos próprios/licenciados | Viável se houver licença. | **Provedor `local`** implementado. |
@@ -151,7 +151,7 @@ docs/               esta documentação
 | 3 | Estrutura, dependências, ambiente, banco | ✅ |
 | 4 | Categorias, desafio diário, áudio, respostas, pontuação, estatísticas | ✅ |
 | 5 | Telas, mascote, animações, estados de carregamento/erro/offline | ✅ |
-| 6 | Testes automatizados e verificação manual | ✅ 107 pytest + 27 Vitest + 12 Playwright |
+| 6 | Testes automatizados e verificação manual | ✅ 124 pytest + 28 Vitest + 12 Playwright |
 | 7 | Publicação | ⚠️ configuração pronta; deploy depende das suas contas (ver [05-implantacao.md](05-implantacao.md)) |
 
 ## 8. Principais riscos técnicos e soluções

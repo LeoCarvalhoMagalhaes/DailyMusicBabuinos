@@ -110,6 +110,7 @@ class AnswerOut(BaseModel):
     artist: str
     cover_url: str | None
     external_url: str | None
+    spotify_url: str | None = None
     attribution: str | None
 
 

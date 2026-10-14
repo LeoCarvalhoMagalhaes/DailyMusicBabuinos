@@ -153,7 +153,11 @@ describe('ResultPanel', () => {
     expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument()
     expect(screen.getByText('Queen')).toBeInTheDocument()
     expect(screen.getByText('80')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Ouvir a música completa/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Ouvir no Spotify/ })).toHaveAttribute(
+      'href',
+      'https://open.spotify.com/track/4u7EnebtmKWzUH433cf5Qv',
+    )
+    expect(screen.getByRole('link', { name: /Abrir no Deezer/ })).toHaveAttribute(
       'href',
       'https://www.deezer.com/track/1',
     )
@@ -171,6 +175,15 @@ describe('ResultPanel', () => {
     act(() => vi.advanceTimersByTime(1000))
     expect(screen.getByText('01:59:59')).toBeInTheDocument()
     vi.useRealTimers()
+  })
+})
+
+describe('ResultPanel sem Spotify', () => {
+  it('mostra só o link do provedor de áudio quando não há id do Spotify', () => {
+    const answer = { ...WON_GAME.answer!, spotify_url: null }
+    render(<ResultPanel game={{ ...WON_GAME, answer }} />)
+    expect(screen.queryByRole('link', { name: /Spotify/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Ouvir a música completa/ })).toBeInTheDocument()
   })
 })
 

@@ -33,6 +33,7 @@ class RevealedAnswer:
     artist: str
     cover_url: str | None
     external_url: str | None
+    spotify_url: str | None
     attribution: str | None
 
 
@@ -167,6 +168,7 @@ def reveal_answer(game: GameSession, provider: AudioProvider) -> RevealedAnswer:
         raise ForbiddenError("A resposta só aparece no fim da partida.", code="game_in_progress")
     track = game.challenge.track
     meta = provider.metadata(track)
-    return RevealedAnswer(track.title, track.artist, meta.cover_url, meta.external_url,
+    spotify_url = f"https://open.spotify.com/track/{track.spotify_id}" if track.spotify_id else None
+    return RevealedAnswer(track.title, track.artist, meta.cover_url, meta.external_url, spotify_url,
                           meta.attribution)
 

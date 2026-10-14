@@ -32,7 +32,8 @@ def answer_out(game: GameSession, provider: AudioProvider) -> AnswerOut | None:
         return None
     revealed = reveal_answer(game, provider)
     return AnswerOut(title=revealed.title, artist=revealed.artist, cover_url=revealed.cover_url,
-                     external_url=revealed.external_url, attribution=revealed.attribution)
+                     external_url=revealed.external_url, spotify_url=revealed.spotify_url,
+                     attribution=revealed.attribution)
 
 
 def game_state(game: GameSession, settings: Settings, provider: AudioProvider,

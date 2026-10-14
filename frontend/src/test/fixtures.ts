@@ -35,6 +35,7 @@ export const WON_GAME = makeGame({
     artist: 'Queen',
     cover_url: null,
     external_url: 'https://www.deezer.com/track/1',
+    spotify_url: 'https://open.spotify.com/track/4u7EnebtmKWzUH433cf5Qv',
     attribution: 'Prévia de áudio fornecida pelo Deezer',
   },
 })

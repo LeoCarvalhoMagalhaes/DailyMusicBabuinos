@@ -72,7 +72,7 @@ A documentação interativa (OpenAPI) fica em `/api/docs` fora de produção.
 catalog_sources (id PK, name, kind[editorial|chart], url, retrieved_on, methodology)
 music_tracks    (id PK, slug UNIQUE, edition[main|demo] IDX, title, artist IDX,
                  primary_category, extra_genres JSON, aliases JSON,
-                 external_provider, external_id, external_url, cover_url,
+                 external_provider, external_id, external_url, cover_url, spotify_id,
                  audio_ref, license_note, availability, availability_checked_at)
 catalog_entries (id PK, category IDX, track_id FK, reference_rank NULL, source_id FK, active,
                  UNIQUE(category, track_id))
@@ -138,8 +138,8 @@ Migrações: `backend/alembic/versions`. A API aplica `alembic upgrade head` ao 
 
 | Camada | Ferramenta | O que cobre |
 | --- | --- | --- |
-| Backend | pytest (107 testes, SQLite e PostgreSQL) | seleção diária, consistência entre jogadores e servidores, virada à meia-noite, validação e normalização, tentativas, pontuação, fim por acerto/derrota, proteção contra tentativas extras, isolamento entre jogadores, sigilo da resposta, estatísticas e sequências, persistência após reinício, corte de MP3/WAV, provedor Deezer com respostas simuladas e falhas, limites de requisição, CORS, configuração |
-| Frontend | Vitest + Testing Library (27) | texto de compartilhamento sem spoiler, Web Share e fallback, autocomplete por teclado, player e trechos bloqueados, tentativas, resultado, hook da partida (duplo clique, sincronização, duplicados) |
+| Backend | pytest (124 testes, SQLite e PostgreSQL) | seleção diária, consistência entre jogadores e servidores, virada à meia-noite, validação e normalização, tentativas, pontuação, fim por acerto/derrota, proteção contra tentativas extras, isolamento entre jogadores, sigilo da resposta, estatísticas e sequências, persistência após reinício, corte de MP3/WAV, provedor Deezer com respostas simuladas e falhas, importador do kworb (leitura das tabelas, limpeza de títulos, ranking, limite por artista, cache, intervalo entre requisições, recusa de catálogo incompleto, link do Spotify após a partida), limites de requisição, CORS, configuração |
+| Frontend | Vitest + Testing Library (28) | texto de compartilhamento sem spoiler, Web Share e fallback, autocomplete por teclado, player e trechos bloqueados, tentativas, resultado, hook da partida (duplo clique, sincronização, duplicados) |
 | Ponta a ponta | Playwright (12 = 6 fluxos × desktop e celular) | partida vencida com áudio, erro, recarga, acerto e compartilhamento; derrota e estatísticas; palpite repetido; offline; páginas estáticas e 404; ausência de rolagem horizontal |
 
 Comandos em [README.md](../README.md#testes).

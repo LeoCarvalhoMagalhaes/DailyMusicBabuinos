@@ -41,22 +41,24 @@ Docker · Render Blueprint · GitHub Actions.
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-uvicorn app.main:app --reload        # http://127.0.0.1:8000 (demo mode, SQLite)
+uvicorn app.main:app --reload        # http://127.0.0.1:8000 (SQLite)
 
 cd frontend
 npm install
 npm run dev                          # http://localhost:5173
 ```
 
-Set `AUDIO_PROVIDER=deezer` in `backend/.env` to use real Deezer previews and the main
-6 × 100 catalog (internet access required, no API key). `docker compose up --build` runs the
+By default the game plays excerpts of the original recordings (official Deezer previews)
+with the main 6 × 100 catalog (internet required, no API key). Use `AUDIO_PROVIDER=demo` to
+play offline. Build the catalog from Spotify stream counts with
+`python -m app.cli import-kworb` (data from kworb.net). `docker compose up --build` runs the
 API with PostgreSQL.
 
 ## Tests
 
 ```bash
-cd backend && pytest                       # 107 tests (also run on PostgreSQL via TEST_DATABASE_URL)
-cd frontend && npm run typecheck && npm test && npm run e2e   # 27 unit + 12 E2E (desktop & mobile)
+cd backend && pytest                       # 124 tests (also run on PostgreSQL via TEST_DATABASE_URL)
+cd frontend && npm run typecheck && npm test && npm run e2e   # 28 unit + 12 E2E (desktop & mobile)
 ```
 
 ## Documentation (Portuguese)
@@ -66,10 +68,12 @@ deployment guides live in [`docs/`](docs).
 
 ## Audio and catalog notes
 
-- **Demo mode** (default) uses public-domain compositions with arrangements synthesized by
-  the game; it is clearly labelled and is not the final catalog.
-- The **main catalog** is a documented **editorial selection** of 100 songs per category — not
-  an official chart, and no rank positions are invented.
+- **Song list:** the most-streamed songs on Spotify, from kworb.net public data, with rank,
+  source and date recorded (an editorial selection is used until the importer is run).
+- **Audio:** growing excerpts of the original recording from Deezer's official previews.
+  Spotify is not used as an audio source because its Developer Policy forbids games and
+  quizzes.
+- **Demo mode** (`AUDIO_PROVIDER=demo`) is for offline use only.
 - Deezer previews follow Deezer's developer terms (personal use, attribution). For commercial
   use, contact Deezer or use licensed audio (`AUDIO_PROVIDER=local`).
 

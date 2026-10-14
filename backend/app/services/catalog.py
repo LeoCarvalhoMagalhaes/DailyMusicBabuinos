@@ -50,6 +50,7 @@ class CatalogTrackSpec:
     aliases: list[str] = field(default_factory=list)
     audio_ref: str | None = None
     license_note: str = ""
+    spotify_id: str | None = None
 
 
 @dataclass
@@ -101,6 +102,7 @@ def load_catalog_files(dirs: tuple[Path, ...] = CATALOG_DIRS) -> CatalogBundle:
                     categories={}, source_by_category={},
                     genres=list(raw.get("genres", [])), aliases=list(raw.get("aliases", [])),
                     audio_ref=raw.get("audio_ref"), license_note=raw.get("license", ""),
+                    spotify_id=raw.get("spotify_id"),
                 )
                 tracks[slug] = spec
             elif spec.edition != edition:
@@ -109,6 +111,7 @@ def load_catalog_files(dirs: tuple[Path, ...] = CATALOG_DIRS) -> CatalogBundle:
                 for alias in raw.get("aliases", []):
                     if alias not in spec.aliases:
                         spec.aliases.append(alias)
+                spec.spotify_id = spec.spotify_id or raw.get("spotify_id")
             for cat in categories:
                 spec.categories.setdefault(cat, rank)
                 spec.source_by_category.setdefault(cat, source["id"])
@@ -149,6 +152,7 @@ def sync_catalog(db: Session, bundle: CatalogBundle | None = None) -> dict[str, 
         row.aliases = spec.aliases
         row.audio_ref = spec.audio_ref
         row.license_note = spec.license_note
+        row.spotify_id = spec.spotify_id
         db.add(row)
     db.flush()
 

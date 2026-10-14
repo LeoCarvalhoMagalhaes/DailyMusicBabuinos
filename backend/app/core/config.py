@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     repeat_window_days: int = 60
     artist_cooldown_days: int = 7
 
-    audio_provider: AudioProviderName = "demo"
+    audio_provider: AudioProviderName = "deezer"
     audio_local_dir: str = "./audio-local"
     audio_cache_ttl_seconds: int = 600
     audio_cache_max_items: int = 32

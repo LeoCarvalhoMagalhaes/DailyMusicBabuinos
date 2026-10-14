@@ -52,9 +52,9 @@ export function DemoBanner({ show }: { show: boolean }) {
     <aside className={styles.demo} aria-label="Modo demonstração">
       <FlaskConical size={18} aria-hidden className={styles.demoIcon} />
       <p>
-        <strong>Modo demonstração.</strong> Sem um provedor de áudio licenciado configurado, o
-        jogo usa melodias em domínio público com arranjos sintetizados pelo próprio Músicas
-        Babuínas. O catálogo real de cada categoria fica ativo com as prévias do Deezer.{' '}
+        <strong>Modo demonstração (offline).</strong> Este servidor está tocando melodias em
+        domínio público sintetizadas pelo próprio jogo. No modo normal, as músicas são as mais
+        ouvidas no Spotify (dados do kworb) e você ouve trechos das gravações originais.{' '}
         <Link to="/sobre#fontes">Saiba mais</Link>
       </p>
     </aside>

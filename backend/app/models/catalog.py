@@ -42,6 +42,9 @@ class MusicTrack(Base):
     external_id: Mapped[str | None] = mapped_column(String(64))
     external_url: Mapped[str | None] = mapped_column(String(500))
     cover_url: Mapped[str | None] = mapped_column(String(500))
+    # Id da faixa no Spotify (catálogo importado do kworb). Usado apenas para o link
+    # "Ouvir no Spotify" depois da partida; o áudio do jogo não vem do Spotify.
+    spotify_id: Mapped[str | None] = mapped_column(String(32))
     # Referência interna de áudio (melodia do modo demo ou arquivo local).
     audio_ref: Mapped[str | None] = mapped_column(String(200))
     license_note: Mapped[str] = mapped_column(Text, default="")

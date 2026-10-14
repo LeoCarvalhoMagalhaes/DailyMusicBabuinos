@@ -10,7 +10,12 @@ const python = process.env.E2E_PYTHON ?? path.join(backendDir, '.venv/bin/python
 export function revealAnswer(category: string): { title: string; artist: string } {
   const output = execFileSync(python, ['-m', 'app.cli', 'reveal', '--category', category, '--json'], {
     cwd: backendDir,
-    env: { ...process.env, DATABASE_URL: `sqlite:///${path.join(backendDir, 'e2e.db')}` },
+    // Mesmo banco e mesmo provedor do servidor dos testes (modo demo).
+    env: {
+      ...process.env,
+      DATABASE_URL: `sqlite:///${path.join(backendDir, 'e2e.db')}`,
+      AUDIO_PROVIDER: 'demo',
+    },
   })
   return JSON.parse(output.toString())
 }

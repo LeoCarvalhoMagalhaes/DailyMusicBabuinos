@@ -65,10 +65,20 @@ export function ResultPanel({ game, serverTime, onNewDay }: ResultPanelProps) {
           <div className={styles.answerText}>
             <p className={styles.songTitle}>{answer.title}</p>
             <p className={styles.artist}>{answer.artist}</p>
-            {answer.external_url && (
-              <a href={answer.external_url} target="_blank" rel="noreferrer noopener" className={styles.link}>
-                Ouvir a música completa <ExternalLink size={14} aria-hidden />
-              </a>
+            {(answer.spotify_url || answer.external_url) && (
+              <p className={styles.links}>
+                {answer.spotify_url && (
+                  <a href={answer.spotify_url} target="_blank" rel="noreferrer noopener" className={styles.spotify}>
+                    Ouvir no Spotify <ExternalLink size={14} aria-hidden />
+                  </a>
+                )}
+                {answer.external_url && (
+                  <a href={answer.external_url} target="_blank" rel="noreferrer noopener" className={styles.link}>
+                    {answer.spotify_url ? 'Abrir no Deezer' : 'Ouvir a música completa'}{' '}
+                    <ExternalLink size={14} aria-hidden />
+                  </a>
+                )}
+              </p>
             )}
             {answer.attribution && <p className={styles.attribution}>{answer.attribution}</p>}
           </div>

@@ -57,6 +57,7 @@ export interface Answer {
   artist: string
   cover_url: string | null
   external_url: string | null
+  spotify_url?: string | null
   attribution: string | null
 }
 

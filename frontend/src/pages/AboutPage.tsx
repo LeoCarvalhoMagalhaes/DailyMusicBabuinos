@@ -49,15 +49,26 @@ export function AboutPage() {
           jogo, em estilos inspirados em cada categoria, sem gravações de terceiros. Esse catálogo
           serve para testar e demonstrar o jogo — ele não é o catálogo musical definitivo.
         </p>
-        <h3>Catálogo principal e prévias do Deezer</h3>
+        <h3>Músicas: as mais ouvidas no Spotify</h3>
         <p>
-          O catálogo principal reúne 100 músicas de referência por categoria. É uma{' '}
-          <strong>curadoria editorial</strong> (faixas amplamente reconhecidas, diversidade de
-          décadas, subgêneros e artistas, incluindo produção nacional) — não um ranking oficial e
-          sem posições numéricas inventadas. Nesse modo, o áudio vem das prévias oficiais de 30
-          segundos da API pública do Deezer; o servidor entrega só o trecho liberado e mostra a
-          atribuição ao Deezer e o link para a faixa no fim da partida. Direitos das gravações
-          pertencem aos respectivos titulares.
+          O catálogo principal reúne 100 músicas por categoria, escolhidas pelos números de{' '}
+          <strong>streams no Spotify</strong> publicados pelo{' '}
+          <a href="https://kworb.net/spotify/" target="_blank" rel="noreferrer noopener">
+            kworb.net
+          </a>
+          . A categoria Geral segue a lista global das mais tocadas de todos os tempos; nas outras,
+          as músicas de artistas de cada gênero são ordenadas pelo total de streams. Cada arquivo
+          do catálogo registra a fonte, a data da consulta e a posição. Esses dados são de
+          terceiros, não uma parada oficial do Spotify. No fim da partida, o botão “Ouvir no
+          Spotify” leva à faixa completa.
+        </p>
+        <h3>Áudio: trechos da gravação original</h3>
+        <p>
+          O jogo toca a gravação original, por partes: a cada tentativa o trecho fica maior. O
+          áudio vem das prévias oficiais da API pública do Deezer, porque a política para
+          desenvolvedores do Spotify não permite usar o conteúdo dele em jogos e quizzes. O
+          servidor entrega só o trecho já liberado, sem nome nem metadados, e mostra a atribuição
+          ao Deezer no fim. Os direitos das gravações pertencem aos respectivos titulares.
         </p>
       </section>
 

@@ -79,12 +79,38 @@
   color: var(--text-muted);
 }
 
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 8px;
+}
+
 .link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 6px;
   font-size: 14px;
+}
+
+/* Verde do Spotify, só no texto do link (sem usar o logotipo da marca). */
+.spotify {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(30 215 96 / 0.55);
+  color: #1ed760;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.spotify:hover {
+  background: rgb(30 215 96 / 0.1);
 }
 
 .attribution {

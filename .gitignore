@@ -27,3 +27,6 @@ test-results/
 .DS_Store
 .idea/
 .vscode/
+
+# Cache do importador do kworb
+.kworb-cache/

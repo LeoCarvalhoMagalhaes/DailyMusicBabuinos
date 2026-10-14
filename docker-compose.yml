@@ -21,7 +21,7 @@ services:
     environment:
       APP_ENV: development
       DATABASE_URL: postgresql://babuinos:babuinos@db:5432/babuinos
-      AUDIO_PROVIDER: ${AUDIO_PROVIDER:-demo}
+      AUDIO_PROVIDER: ${AUDIO_PROVIDER:-deezer}
       CHALLENGE_SECRET: ${CHALLENGE_SECRET:-segredo-local-do-docker-compose-troque-me-123}
       CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     ports:
