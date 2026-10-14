@@ -5,6 +5,7 @@
     python -m app.cli publish-today      # publica os desafios do dia nas 6 categorias
     python -m app.cli check-audio        # valida a disponibilidade de áudio do catálogo
     python -m app.cli reveal --category rock   # mostra a resposta de hoje (suporte/testes E2E)
+    python -m app.cli reveal --room ABC234     # resposta da rodada atual de uma sala
     python -m app.cli purge-inactive --days 400  # retenção: apaga jogadores inativos
     python -m app.cli import-kworb               # gera o catálogo a partir do Spotify (kworb)
 
@@ -40,7 +41,7 @@ from app.core.config import get_settings
 from app.core.errors import AudioUnavailableError
 from app.database.migrate import upgrade_to_head
 from app.database.session import build_engine, build_session_factory
-from app.models import CatalogEntry, MusicTrack, Player
+from app.models import CatalogEntry, Match, MusicTrack, Player, Room
 from app.services.catalog import DATA_DIR, sync_catalog
 from app.services.daily import get_challenge, get_or_create_challenge
 
@@ -117,7 +118,9 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("--recheck", action="store_true",
                        help="Verifica de novo as faixas marcadas como sem prévia")
     reveal = sub.add_parser("reveal")
-    reveal.add_argument("--category", choices=CATEGORY_SLUGS, required=True)
+    target = reveal.add_mutually_exclusive_group(required=True)
+    target.add_argument("--category", choices=CATEGORY_SLUGS)
+    target.add_argument("--room", help="Código da sala multiplayer (rodada atual)")
     reveal.add_argument("--json", action="store_true")
     purge = sub.add_parser("purge-inactive")
     purge.add_argument("--days", type=int, default=400)
@@ -170,6 +173,17 @@ def main(argv: list[str] | None = None) -> int:
             check_audio(db, provider, settings.catalog_edition, args.limit, args.delay,
                         recheck=args.recheck)
             print_audio_summary(db, settings.catalog_edition)
+        elif args.command == "reveal" and args.room:
+            room = db.scalar(select(Room).where(Room.code == args.room.strip().upper()))
+            match = db.get(Match, room.current_match_id) if room and room.current_match_id else None
+            if match is None:
+                print("Sala sem partida.", file=sys.stderr)
+                return 1
+            rnd = next(r for r in match.rounds if r.number == match.current_round)
+            payload = {"room": room.code, "round": rnd.number, "category": rnd.category,
+                       "title": rnd.track.title, "artist": rnd.track.artist}
+            print(json.dumps(payload, ensure_ascii=False) if args.json
+                  else f"{payload['title']} — {payload['artist']}")
         elif args.command == "reveal":
             ch = get_challenge(db, args.category, clock.today(), settings.catalog_edition)
             if ch is None:

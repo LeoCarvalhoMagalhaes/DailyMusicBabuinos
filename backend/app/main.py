@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -10,7 +12,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
-from app.api.routes import endless, games, public
+from app.api.routes import endless, games, multiplayer, public
 from app.audio import build_provider
 from app.core.clock import Clock
 from app.core.config import DEV_SECRET, Settings, get_settings
@@ -18,6 +20,7 @@ from app.core.errors import install_error_handlers
 from app.core.rate_limit import RateLimiter
 from app.database.migrate import upgrade_to_head
 from app.database.session import build_engine, build_session_factory
+from app.realtime import RealtimeHub
 from app.services.catalog import sync_catalog
 
 logger = logging.getLogger("babuinos")
@@ -40,7 +43,14 @@ def create_app(settings: Settings | None = None, *, clock: Clock | None = None,
             logger.warning("CHALLENGE_SECRET padrão de desenvolvimento em uso.")
         logger.info("Provedor de áudio: %s | edição do catálogo: %s",
                     app.state.audio_provider.name, settings.catalog_edition)
+        # Laço do multiplayer em tempo real (rodadas pelo relógio + avisos por WebSocket).
+        task = (asyncio.create_task(app.state.realtime.run(app))
+                if settings.realtime_enabled else None)
         yield
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
         app.state.engine.dispose()
 
     app = FastAPI(
@@ -59,6 +69,7 @@ def create_app(settings: Settings | None = None, *, clock: Clock | None = None,
     app.state.clock = clock or Clock(settings.tz)
     app.state.audio_provider = build_provider(settings)
     app.state.rate_limiter = RateLimiter(settings.rate_limit_enabled)
+    app.state.realtime = RealtimeHub()
 
     app.add_middleware(
         CORSMiddleware,
@@ -84,6 +95,7 @@ def create_app(settings: Settings | None = None, *, clock: Clock | None = None,
     app.include_router(public.router)
     app.include_router(games.router)
     app.include_router(endless.router)
+    app.include_router(multiplayer.router)
     return app
 
 

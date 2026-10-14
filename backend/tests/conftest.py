@@ -59,6 +59,9 @@ def make_settings(tmp_path: Path, **overrides) -> Settings:
         "challenge_secret": TEST_SECRET,
         "audio_provider": "demo",
         "rate_limit_enabled": False,
+        # O laço em tempo real fica desligado nos testes (que controlam o relógio); os
+        # testes de WebSocket o ligam explicitamente.
+        "realtime_enabled": False,
         "cors_origins": ["http://localhost:5173"],
     }
     values.update(overrides)

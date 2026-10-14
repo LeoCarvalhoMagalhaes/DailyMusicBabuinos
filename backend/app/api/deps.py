@@ -12,8 +12,10 @@ from app.core.clock import Clock
 from app.core.config import Settings
 from app.core.errors import UnauthorizedError
 from app.core.rate_limit import RateLimiter
-from app.models import Player
+from app.models import Account, Player
+from app.realtime import RealtimeHub
 from app.repositories.players import find_by_token
+from app.services.accounts import account_for_token
 
 
 def get_db(request: Request) -> Iterator[Session]:
@@ -64,3 +66,20 @@ def current_player(player: Player | None = Depends(optional_player)) -> Player:
         raise UnauthorizedError("Identificação do jogador ausente ou inválida.",
                                 code="invalid_player")
     return player
+
+
+def current_account(
+    db: Session = Depends(get_db),
+    clock: Clock = Depends(get_clock),
+    authorization: str | None = Header(default=None),
+) -> Account:
+    """Conta do multiplayer (token de login, diferente do token anônimo do jogador)."""
+    account = account_for_token(db, _extract_token(authorization, None), clock.now())
+    if account is None:
+        raise UnauthorizedError("Entre na sua conta para jogar o multiplayer.",
+                                code="login_required")
+    return account
+
+
+def get_hub(request: Request) -> RealtimeHub:
+    return request.app.state.realtime

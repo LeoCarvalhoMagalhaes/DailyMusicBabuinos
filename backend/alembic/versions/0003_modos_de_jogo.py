@@ -129,10 +129,10 @@ def upgrade() -> None:
         batch_op.alter_column("challenge_id", existing_type=sa.Integer(), nullable=True)
 
     # Partidas diárias já gravadas: categoria e música vêm do desafio.
+    same_challenge = "FROM daily_challenges d WHERE d.id = game_sessions.challenge_id"
     op.execute(
-        "UPDATE game_sessions SET "
-        "category = (SELECT category FROM daily_challenges d WHERE d.id = game_sessions.challenge_id), "
-        "track_id = (SELECT track_id FROM daily_challenges d WHERE d.id = game_sessions.challenge_id)"
+        f"UPDATE game_sessions SET category = (SELECT category {same_challenge}), "
+        f"track_id = (SELECT track_id {same_challenge})"
     )
 
     with op.batch_alter_table("game_sessions", schema=None) as batch_op:

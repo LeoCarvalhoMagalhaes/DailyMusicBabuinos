@@ -28,3 +28,30 @@ def looks_like_token(token: str) -> bool:
 
 def hmac_hex(secret: str, message: str) -> str:
     return hmac.new(secret.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+# --------------------------------------------------------------- senhas (multiplayer)
+# Senhas escolhidas por pessoas precisam de um hash lento e com sal: scrypt (biblioteca
+# padrão), com parâmetros guardados junto do hash para poderem ser endurecidos depois.
+SCRYPT_N = 2**14
+SCRYPT_R = 8
+SCRYPT_P = 1
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=SCRYPT_N, r=SCRYPT_R,
+                            p=SCRYPT_P, dklen=32)
+    return f"scrypt${SCRYPT_N}${SCRYPT_R}${SCRYPT_P}${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    try:
+        scheme, n, r, p, salt, digest = stored.split("$")
+        if scheme != "scrypt":
+            return False
+        candidate = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt),
+                                   n=int(n), r=int(r), p=int(p), dklen=len(digest) // 2)
+    except (ValueError, TypeError):
+        return False
+    return hmac.compare_digest(candidate.hex(), digest)

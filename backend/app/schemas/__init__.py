@@ -230,3 +230,153 @@ class EndlessStatsBlock(BaseModel):
 class EndlessStatsOut(BaseModel):
     overall: EndlessStatsBlock
     categories: list[EndlessStatsBlock]
+
+
+# ------------------------------------------------------------------- multiplayer
+
+class RegisterIn(BaseModel):
+    username: str = Field(min_length=3, max_length=20)
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(min_length=2, max_length=40)
+
+
+class LoginIn(BaseModel):
+    username: str = Field(min_length=1, max_length=40)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class AccountOut(BaseModel):
+    id: str
+    username: str
+    display_name: str
+
+
+class AuthOut(BaseModel):
+    token: str = Field(description="Enviado como 'Authorization: Bearer' nas rotas /api/mp.")
+    account: AccountOut
+
+
+class CreateRoomIn(BaseModel):
+    category_order: list[CategorySlug] | None = None
+
+
+class JoinRoomIn(BaseModel):
+    code: str = Field(min_length=4, max_length=12)
+
+
+class ReadyIn(BaseModel):
+    ready: bool
+
+
+class OrderIn(BaseModel):
+    category_order: list[CategorySlug]
+
+
+class MatchGuessIn(BaseModel):
+    round: int = Field(ge=1, le=18)
+    attempt: int = Field(ge=1, le=50)
+    guess: str = Field(min_length=1, max_length=200)
+
+
+class MatchSkipIn(BaseModel):
+    round: int = Field(ge=1, le=18)
+    attempt: int = Field(ge=1, le=50)
+
+
+class RoomMemberOut(BaseModel):
+    account_id: str
+    display_name: str
+    is_host: bool
+    ready: bool
+    connected: bool
+    left: bool
+
+
+class PlayerProgressOut(BaseModel):
+    """Andamento público dos outros jogadores na rodada (nunca o texto dos palpites)."""
+
+    account_id: str
+    display_name: str
+    attempts_used: int
+    status: GameStatus
+    score: int
+
+
+class RoundOut(BaseModel):
+    number: int
+    category: CategoryOut
+    index_in_category: int
+    songs_per_category: int
+    started_at: datetime | None
+    ends_at: datetime | None
+
+
+class CategoryScoreOut(BaseModel):
+    category: CategorySlug
+    score: int
+    correct: int
+
+
+class ScoreLineOut(BaseModel):
+    position: int
+    account_id: str
+    display_name: str
+    total_score: int
+    correct: int
+    average_response_ms: int | None
+    per_category: list[CategoryScoreOut]
+    left: bool
+
+
+class RoundResultOut(BaseModel):
+    number: int
+    category: CategoryOut
+    answer: AnswerOut
+    my_status: GameStatus | None
+    my_score: int
+
+
+class MatchOut(BaseModel):
+    id: str
+    # playing | finished | abandoned
+    status: Literal["playing", "finished", "abandoned"]
+    # playing (palpites abertos) | reveal (resposta à mostra)
+    phase: Literal["playing", "reveal"]
+    current_round: int
+    total_rounds: int
+    phase_ends_at: datetime
+    round: RoundOut
+    my_game: GameState | None
+    progress: list[PlayerProgressOut]
+    # Só na fase de revelação ou com a partida encerrada.
+    answer: AnswerOut | None
+    scoreboard: list[ScoreLineOut]
+    history: list[RoundResultOut]
+    winner_ids: list[str]
+
+
+class RoomStateOut(BaseModel):
+    id: str
+    code: str
+    # waiting (sala de espera, inclusive entre partidas) | playing | closed
+    status: Literal["waiting", "playing", "closed"]
+    version: int
+    me: str
+    host_account_id: str
+    category_order: list[CategorySlug]
+    members: list[RoomMemberOut]
+    min_players: int
+    max_players: int
+    can_start: bool
+    start_blocker: str | None
+    round_seconds: float
+    reveal_seconds: float
+    speed_bonus_max: int
+    rules: Rules
+    server_time: datetime
+    match: MatchOut | None
+
+
+class MatchGuessResult(BaseModel):
+    correct: bool
+    state: RoomStateOut
