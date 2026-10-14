@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.api.presenters import category_out, game_state, rules_out
 from app.audio.base import AudioProvider
-from app.core.clock import Clock
+from app.core.clock import Clock, as_utc
 from app.core.config import Settings
 from app.models import Account, GameSession, Room
 from app.schemas import (
@@ -110,11 +110,14 @@ def _match_out(db: Session, settings: Settings, provider: AudioProvider, clock: 
     return MatchOut(
         id=match.id, status=match.status, phase=match.phase,  # type: ignore[arg-type]
         current_round=match.current_round, total_rounds=len(match.rounds),
-        phase_ends_at=match.phase_ends_at,
+        # Sempre com fuso (o SQLite devolve datas sem fuso, que o navegador leria como
+        # horário local).
+        phase_ends_at=as_utc(match.phase_ends_at),
         round=RoundOut(number=rnd.number, category=category_out(rnd.category),
                        index_in_category=(rnd.number - 1) % mp.ROUNDS_PER_CATEGORY + 1,
-                       songs_per_category=mp.ROUNDS_PER_CATEGORY, started_at=rnd.started_at,
-                       ends_at=rnd.ends_at),
+                       songs_per_category=mp.ROUNDS_PER_CATEGORY,
+                       started_at=as_utc(rnd.started_at) if rnd.started_at else None,
+                       ends_at=as_utc(rnd.ends_at) if rnd.ends_at else None),
         my_game=my_state, progress=progress,
         answer=_answer(rnd.track, provider) if revealed_now else None,
         scoreboard=lines, history=history, winner_ids=winners,

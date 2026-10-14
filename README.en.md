@@ -12,8 +12,12 @@ Portuguese.
 
 ## Highlights
 
-- **Six independent daily challenges**, identical for everyone, resetting at midnight in
-  São Paulo time.
+- **Three game modes, same mechanics:** Daily Challenge (six challenges identical for
+  everyone, resetting at midnight in São Paulo time), Endless Mode (unlimited solo rounds, no
+  recent repeats, never touches the daily game) and Multiplayer (accounts, rooms of 2 to 8
+  players with invite codes, 18 songs — 3 per category —, live scoreboard over WebSocket,
+  speed bonus, reconnection and final ranking). See
+  [06 — Modos de jogo](docs/06-modos-de-jogo.md).
 - **Progressive clues** (1, 2, 3, 5, 8, 12 s — configurable), six attempts, skip button and
   100/80/60/40/20/10 scoring.
 - **Server-authoritative:** attempts, validation and scoring run on the backend; the secret
@@ -57,8 +61,8 @@ API with PostgreSQL.
 ## Tests
 
 ```bash
-cd backend && pytest                       # 153 tests (also run on PostgreSQL via TEST_DATABASE_URL)
-cd frontend && npm run typecheck && npm test && npm run e2e   # 31 unit + 12 E2E (desktop & mobile)
+cd backend && pytest                       # 179 tests (also run on PostgreSQL via TEST_DATABASE_URL)
+cd frontend && npm run typecheck && npm test && npm run e2e   # 37 unit + 18 E2E (desktop & mobile)
 ```
 
 ## Documentation (Portuguese)

@@ -48,6 +48,12 @@ Todas as rotas ficam sob `/api`. Erros seguem o formato
 | GET 🔑 | `/statistics` | Estatísticas gerais e por gênero. |
 | GET 🔑 | `/history?limit&offset` | Histórico de partidas. |
 | GET | `/songs/search?q=` | Sugestões de títulos (catálogo inteiro da edição ativa). |
+| POST 🔑 | `/endless/next` | Modo ilimitado: rodada atual ou nova `{category, run_id?}`. |
+| GET 🔑 | `/endless/runs/{run_id}` | Placar da sessão do modo ilimitado. |
+| GET 🔑 | `/endless/stats` | Estatísticas do modo ilimitado (geral e por categoria). |
+
+As rotas do multiplayer (`/auth/*`, `/mp/*` e o WebSocket `/mp/ws`) usam o token da conta e
+estão descritas em [06-modos-de-jogo.md](06-modos-de-jogo.md#rotas).
 
 A documentação interativa (OpenAPI) fica em `/api/docs` fora de produção.
 
@@ -79,15 +85,35 @@ catalog_entries (id PK, category IDX, track_id FK, reference_rank NULL, source_i
 daily_challenges(id PK, challenge_date IDX, category, edition, track_id FK IDX, status, created_at,
                  UNIQUE(challenge_date, category, edition))
 players         (id PK uuid, token_hash UNIQUE IDX, created_at, last_seen_at)
-game_sessions   (id PK uuid, challenge_id FK IDX, player_id FK, attempts_used, score,
-                 status[in_progress|won|lost], started_at, finished_at,
-                 UNIQUE(player_id, challenge_id), IDX(player_id, status))
+game_sessions   (id PK uuid, mode[daily|endless|match], category, track_id FK IDX,
+                 challenge_id FK NULL IDX (diário), run_id NULL IDX (ilimitado),
+                 match_round_id FK NULL IDX (multiplayer), player_id FK, attempts_used, score,
+                 speed_bonus, response_ms NULL, status[in_progress|won|lost], started_at,
+                 finished_at, UNIQUE(player_id, challenge_id), UNIQUE(player_id, match_round_id),
+                 IDX(player_id, status), IDX(player_id, mode, category))
 game_guesses    (id PK, game_id FK, attempt_number, guess_text, normalized, is_skip, is_correct,
                  created_at, UNIQUE(game_id, attempt_number))
 player_statistics(player_id FK, category["all"|slug], games_played, wins, total_score,
                  current_streak, best_streak, last_played_date, distribution JSON, updated_at,
-                 PK(player_id, category))
+                 PK(player_id, category))                      -- só o desafio diário
+accounts        (id PK uuid, username UNIQUE, display_name, password_hash[scrypt], player_id FK,
+                 created_at)
+auth_sessions   (token_hash PK, account_id FK IDX, created_at, expires_at)
+rooms           (id PK uuid, code UNIQUE, host_account_id FK, status[waiting|playing|closed],
+                 category_order JSON, current_match_id, version, created_at, updated_at)
+room_members    (id PK, room_id FK IDX, account_id FK, ready, joined_at, last_seen_at,
+                 left_at NULL, UNIQUE(room_id, account_id))
+matches         (id PK uuid, room_id FK IDX, status[playing|finished|abandoned], current_round,
+                 phase[playing|reveal], phase_started_at, phase_ends_at, participant_ids JSON,
+                 started_at, finished_at)
+match_rounds    (id PK, match_id FK IDX, number 1..18, category, track_id FK, started_at,
+                 ends_at, UNIQUE(match_id, number))
 ```
+
+Os três modos compartilham `game_sessions` e `game_guesses`: uma rodada de qualquer modo é
+uma partida com a mesma mecânica. As estatísticas do diário (`player_statistics`) só
+contam partidas `daily`; as do modo ilimitado são calculadas a partir de `game_sessions`;
+o placar multiplayer sai das rodadas da partida.
 
 Mapeamento para as entidades pedidas: **MusicTrack** = `music_tracks` + `catalog_entries`
 (posição e fonte por categoria, sem duplicar a faixa quando ela aparece em duas listas);
@@ -138,8 +164,8 @@ Migrações: `backend/alembic/versions`. A API aplica `alembic upgrade head` ao 
 
 | Camada | Ferramenta | O que cobre |
 | --- | --- | --- |
-| Backend | pytest (153 testes, SQLite e PostgreSQL; 1 deles só com `DEEZER_LIVE=1`) | seleção diária, consistência entre jogadores e servidores, virada à meia-noite, validação e normalização, tentativas, pontuação, fim por acerto/derrota, proteção contra tentativas extras, isolamento entre jogadores, sigilo da resposta, estatísticas e sequências, persistência após reinício, corte de MP3/WAV, provedor Deezer com respostas simuladas e falhas (escolha da gravação original, parcerias, versões ao vivo), corte no layout de uma prévia real, importador do kworb (leitura das tabelas, limpeza de títulos, ranking, limite por artista, cache, intervalo entre requisições, recusa de catálogo incompleto, link do Spotify após a partida, formato real das páginas), check-audio, limites de requisição, CORS, configuração |
-| Frontend | Vitest + Testing Library (31) | texto de compartilhamento sem spoiler, Web Share e fallback, autocomplete por teclado, player e trechos bloqueados, tentativas, resultado, hook da partida (duplo clique, sincronização, duplicados), liberação do áudio no toque (iOS) |
-| Ponta a ponta | Playwright (12 = 6 fluxos × desktop e celular; +6 no WebKit/iPhone com `E2E_WEBKIT=1`) | partida vencida com áudio, erro, recarga, acerto e compartilhamento; derrota e estatísticas; palpite repetido; offline; páginas estáticas e 404; ausência de rolagem horizontal |
+| Backend | pytest (179 testes, SQLite e PostgreSQL; 1 deles só com `DEEZER_LIVE=1`) | seleção diária, consistência entre jogadores e servidores, virada à meia-noite, validação e normalização, tentativas, pontuação, fim por acerto/derrota, proteção contra tentativas extras, isolamento entre jogadores, sigilo da resposta, estatísticas e sequências, persistência após reinício, corte de MP3/WAV, provedor Deezer com respostas simuladas e falhas (escolha da gravação original, parcerias, versões ao vivo), corte no layout de uma prévia real, importador do kworb (leitura das tabelas, limpeza de títulos, ranking, limite por artista, cache, intervalo entre requisições, recusa de catálogo incompleto, link do Spotify após a partida, formato real das páginas), check-audio, limites de requisição, CORS, configuração |
+| Frontend | Vitest + Testing Library (37) | texto de compartilhamento sem spoiler, Web Share e fallback, autocomplete por teclado, player e trechos bloqueados, tentativas, resultado, hook da partida (duplo clique, sincronização, duplicados), liberação do áudio no toque (iOS) |
+| Ponta a ponta | Playwright (18 = 9 fluxos × desktop e celular, incluindo ilimitado e multiplayer com dois navegadores; +9 no WebKit/iPhone com `E2E_WEBKIT=1`) | partida vencida com áudio, erro, recarga, acerto e compartilhamento; derrota e estatísticas; palpite repetido; offline; páginas estáticas e 404; ausência de rolagem horizontal |
 
 Comandos em [README.md](../README.md#testes).

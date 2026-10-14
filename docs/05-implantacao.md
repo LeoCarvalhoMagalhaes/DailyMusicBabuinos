@@ -29,6 +29,12 @@ palpites, corta o áudio e mantém as estatísticas.
 
 Consequências para o jogo:
 
+- **Multiplayer em tempo real:** o Render aceita WebSocket no Web Service (também no plano
+  gratuito), sem configuração extra. As conexões e o laço que avança as rodadas ficam em
+  memória, então a API deve rodar com **uma instância** (o padrão do plano gratuito). O estado
+  das salas e partidas fica no banco: se a API reiniciar, os jogadores reconectam e continuam.
+  Detalhes em [06-modos-de-jogo.md](06-modos-de-jogo.md#hospedagem-das-conexões-persistentes).
+
 - O primeiro jogador depois de um período ocioso espera a API acordar (a tela mostra
   "Afinando as guitarras…"). Um monitor externo pingando `/api/health` evita isso, mas consome
   horas de instância.
@@ -51,7 +57,12 @@ Consequências para o jogo:
 | `CHALLENGE_TIMEZONE` | `America/Sao_Paulo` | Fuso da virada diária. |
 | `LAUNCH_DATE` | data do lançamento | Define o "Desafio #1". |
 | `CLIP_STAGES_SECONDS`, `SCORE_TABLE` | opcional | Mesma quantidade de itens. |
-| `RATE_LIMIT_*` | opcional | Limites por minuto/hora. |
+| `RATE_LIMIT_*` | opcional | Limites por minuto/hora (`RATE_LIMIT_AUTH_PER_HOUR` para login e cadastro). |
+| `MP_ROUND_SECONDS`, `MP_REVEAL_SECONDS`, `MP_SPEED_BONUS_MAX` | opcional | Tempo da rodada (60), da revelação (8) e bônus máximo (50) do multiplayer. |
+| `MP_MIN_PLAYERS`, `MP_MAX_PLAYERS` | opcional | 2 e 8 por padrão. |
+| `MP_IDLE_MINUTES`, `MP_ROOM_IDLE_MINUTES` | opcional | Encerramento por inatividade (10 e 30 min). |
+| `AUTH_SESSION_DAYS` | opcional | Validade do login (30 dias). |
+| `ENDLESS_RECENT_WINDOW` | opcional | Músicas recentes evitadas no modo ilimitado (50). |
 
 ### Frontend
 

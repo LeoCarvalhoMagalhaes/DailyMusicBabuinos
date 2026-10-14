@@ -209,6 +209,10 @@ def test_match_has_18_songs_three_per_category(main_harness: Harness) -> None:
         assert {s.mode for s in sessions} == {"match"}
     current = state(h, heads[1], code)
     assert current["status"] == "playing"
+    # Datas sempre com fuso: o navegador calcula o cronômetro a partir delas.
+    for value in (current["match"]["phase_ends_at"], current["match"]["round"]["ends_at"],
+                  current["server_time"]):
+        assert value.endswith(("Z", "+00:00")), value
     match_state = current["match"]
     assert (match_state["current_round"], match_state["total_rounds"]) == (1, 18)
     assert match_state["round"]["category"]["slug"] == "pop"

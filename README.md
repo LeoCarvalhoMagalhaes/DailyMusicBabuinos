@@ -1,8 +1,9 @@
 # 🐒🎸 Músicas Babuínas
 
-**Ouviu? Adivinha!** Um jogo diário de adivinhação musical: a cada dia, seis categorias
-(Rock, Pop, Rap, Country, Eletrônica e Geral) ganham uma música secreta — a mesma para todos
-os jogadores. Você ouve um trecho de 1 segundo e tem seis tentativas; a cada erro ou pulo, a
+**Ouviu? Adivinha!** Um jogo de adivinhação musical com três modos: o **Desafio Diário**
+(a cada dia, seis categorias — Rock, Pop, Rap, Country, Eletrônica e Geral — ganham uma música
+secreta, a mesma para todos os jogadores), o **Modo Ilimitado** (rodadas solo sem fim) e o
+**Multiplayer** (salas de 2 a 8 jogadores disputando 18 músicas em tempo real). Você ouve um trecho de 1 segundo e tem seis tentativas; a cada erro ou pulo, a
 música toca um pouco mais. O mascote **Babuíno do Rock** reage a cada jogada.
 
 **Jogue em https://leocarvalhomagalhaes.github.io/DailyMusicBabuinos/** · *[Read in English](README.en.md)*
@@ -15,8 +16,11 @@ música toca um pouco mais. O mascote **Babuíno do Rock** reage a cada jogada.
 
 ## Destaques
 
-- **Seis desafios diários independentes**, iguais para todos, com virada à meia-noite de
-  Brasília e número do desafio.
+- **Três modos com a mesma mecânica:** Desafio Diário (seis desafios iguais para todos, com
+  virada à meia-noite de Brasília), Modo Ilimitado (rodadas solo sem repetir músicas e sem
+  mexer no diário) e Multiplayer (contas, salas de 2 a 8 com código de convite, 18 músicas —
+  3 por categoria —, placar ao vivo por WebSocket, bônus de velocidade, reconexão e
+  classificação final). Veja [06 — Modos de jogo](docs/06-modos-de-jogo.md).
 - **Pistas progressivas** (1, 2, 3, 5, 8 e 12 s, configuráveis), seis tentativas, botão de
   pular e pontuação 100/80/60/40/20/10.
 - **Backend como autoridade:** tentativas, validação e pontos no servidor; a música secreta
@@ -96,14 +100,14 @@ python -m app.cli purge-inactive --days 400  # retenção de dados
 ## Testes
 
 ```bash
-cd backend && pytest                                   # 153 testes (SQLite; 1 só com DEEZER_LIVE=1)
+cd backend && pytest                                   # 179 testes (SQLite; 1 só com DEEZER_LIVE=1)
 TEST_DATABASE_URL=postgresql://user:senha@localhost:5432/babuinos_test pytest   # mesmos testes no PostgreSQL
 
 cd frontend
-npm run typecheck && npm test                          # 31 testes Vitest
+npm run typecheck && npm test                          # 37 testes Vitest
 npx playwright install chromium                        # uma vez
-npm run e2e                                            # 12 testes E2E (desktop + celular)
-E2E_WEBKIT=1 npm run e2e                               # + 6 no WebKit (iPhone); antes: npx playwright install webkit
+npm run e2e                                            # 18 testes E2E (desktop + celular)
+E2E_WEBKIT=1 npm run e2e                               # + 9 no WebKit (iPhone); antes: npx playwright install webkit
 ```
 
 Os testes E2E sobem o backend real em modo demonstração (banco descartável) e o frontend,
@@ -118,6 +122,7 @@ jogam partidas completas e verificam que não há rolagem horizontal no celular.
 | [03 — Áudio e catálogo](docs/03-audio-e-catalogo.md) | Provedores, limitações e termos do Deezer, corte do áudio, modo demo, metodologia e atualização do catálogo |
 | [04 — Design](docs/04-design.md) | Identidade visual, mascote, telas, componentes, responsividade e acessibilidade |
 | [05 — Implantação](docs/05-implantacao.md) | Passo a passo, variáveis de ambiente, limites dos planos gratuitos |
+| [06 — Modos de jogo](docs/06-modos-de-jogo.md) | Diário, ilimitado e multiplayer: regras, pontuação, tempo real, reconexão e hospedagem |
 
 ## Sobre o áudio e o catálogo (importante)
 
