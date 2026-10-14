@@ -36,6 +36,11 @@ export default defineConfig({
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    // Opcional: motor do Safari (WebKit) emulando um iPhone. Rode com E2E_WEBKIT=1 depois
+    // de `npx playwright install webkit`. O WebKit não aceita permissões de clipboard.
+    ...(process.env.E2E_WEBKIT
+      ? [{ name: 'iphone', use: { ...devices['iPhone 13'], permissions: [] } }]
+      : []),
   ],
   webServer: [
     {

@@ -19,6 +19,35 @@ export function revealAnswer(category: string): { title: string; artist: string 
   return JSON.parse(output.toString())
 }
 
+/**
+ * Guarda o texto compartilhado (Web Share API ou cópia) em `window.__shared`, sem depender
+ * de ler a área de transferência — o WebKit do Playwright não permite essa leitura.
+ * Os métodos originais continuam sendo chamados.
+ */
+export async function captureShares(page: Page) {
+  await page.addInitScript(() => {
+    const store = window as unknown as { __shared: string[] }
+    store.__shared = []
+    const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> }
+    if (typeof nav.share === 'function') {
+      nav.share = async (data: ShareData) => {
+        store.__shared.push(data.text ?? '')
+      }
+    }
+    if (navigator.clipboard?.writeText) {
+      const original = navigator.clipboard.writeText.bind(navigator.clipboard)
+      navigator.clipboard.writeText = async (text: string) => {
+        store.__shared.push(text)
+        return original(text).catch(() => undefined)
+      }
+    }
+  })
+}
+
+export async function sharedText(page: Page): Promise<string> {
+  return page.evaluate(() => (window as unknown as { __shared: string[] }).__shared.join('\n'))
+}
+
 export async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

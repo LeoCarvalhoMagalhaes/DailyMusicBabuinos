@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { expectNoHorizontalScroll, openChallenge, revealAnswer, submitGuess } from './helpers'
+import {
+  captureShares,
+  expectNoHorizontalScroll,
+  openChallenge,
+  revealAnswer,
+  sharedText,
+  submitGuess,
+} from './helpers'
 
 test.describe('Músicas Babuínas', () => {
   test('página inicial mostra as seis categorias e o modo demonstração', async ({ page }) => {
@@ -15,6 +22,7 @@ test.describe('Músicas Babuínas', () => {
   })
 
   test('partida vencida: áudio, erro, persistência, acerto e compartilhamento', async ({ page }) => {
+    await captureShares(page)
     // O trecho liberado é pré-carregado ao abrir a partida: escuta a resposta desde já.
     const audioResponse = page.waitForResponse((r) => r.url().includes('/audio?stage=1'))
     await openChallenge(page, 'rock')
@@ -52,10 +60,10 @@ test.describe('Músicas Babuínas', () => {
     await expect(page.getByRole('img', { name: /sinal do rock/ })).toBeVisible()
     await expect(page.getByText(/Próximo desafio em \d\d:\d\d:\d\d/)).toBeVisible()
 
-    // Compartilhar (fallback para área de transferência) sem revelar a música.
+    // Compartilhar (Web Share API ou cópia) sem revelar a música.
     await page.getByRole('button', { name: /Compartilhar resultado/ }).click()
     await expect(page.getByRole('button', { name: /Copiado|Compartilhado/ })).toBeVisible()
-    const clipboard = await page.evaluate(() => navigator.clipboard.readText())
+    const clipboard = await sharedText(page)
     expect(clipboard).toContain('Resultado: ACERTEI!')
     expect(clipboard).toContain('Tentativa: 2/6')
     expect(clipboard).toContain('🟥🟩⬛⬛⬛⬛')
