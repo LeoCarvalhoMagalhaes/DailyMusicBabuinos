@@ -134,3 +134,11 @@ def test_unknown_route_returns_json_error(harness: Harness) -> None:
     response = harness.client.get("/api/nada")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "not_found"
+
+
+def test_track_slug_treats_curly_and_straight_apostrophes_alike() -> None:
+    from app.services.catalog import track_slug
+
+    # A lista global do kworb usa "Don’t", a página da artista usa "Don't".
+    assert track_slug("Dua Lipa", "Don’t Start Now") == track_slug("Dua Lipa", "Don't Start Now")
+    assert track_slug("Dua Lipa", "Don't Start Now") == "dua-lipa--don-t-start-now"

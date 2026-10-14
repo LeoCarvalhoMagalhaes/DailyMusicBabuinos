@@ -188,22 +188,23 @@ def parse_artist_rows(html: str) -> list[KworbArtist]:
 # --------------------------------------------------------------------------
 
 _FEAT_PARENS = re.compile(r"\s*[\(\[](?:feat\.?|ft\.?|with|com|part\.?)\s[^\)\]]*[\)\]]", re.I)
-_VERSION_SUFFIX = re.compile(
-    r"\s+-\s+(?:\d{4}\s+)?(?:remaster(?:ed)?|live|ao vivo|radio edit|single version|"
-    r"mono|stereo|edit|version|versão|from|remix)\b.*$",
-    re.I,
-)
+# No Spotify, " - " sempre introduz versão ou contexto ("- Remastered 2011", "- PNAU Remix",
+# "- Spider-Man: Into the Spider-Verse", "- feat. ..."): tudo depois dele sai do título.
+_VERSION_SUFFIX = re.compile(r"\s+-\s+.*$")
 _VERSION_PARENS = re.compile(
-    r"\s*[\(\[](?:\d{4}\s+)?(?:remaster(?:ed)?|live|ao vivo|radio edit|single version|"
-    r"mono|stereo)[^\)\]]*[\)\]]",
+    r"\s*[\(\[][^\)\]]*\b(?:remaster(?:ed)?|live|ao vivo|radio edit|single version|mono|"
+    r"stereo|remix|re-edit|edit|mix|rework|version|versão)\b[^\)\]]*[\)\]]"
+    r"|\s*[\(\[]from\s[^\)\]]*[\)\]]",
     re.I,
 )
 
 
 def clean_title(raw: str) -> tuple[str, list[str]]:
-    """Título para exibir e aliases (o título original, se mudou)."""
-    title = _VERSION_SUFFIX.sub("", raw)
-    title = _VERSION_PARENS.sub("", title)
+    """Título para exibir e aliases (o título original, se mudou). Revisado com os
+    dados reais de 14/10/2026."""
+    # Parênteses primeiro: "(Live - Ibirapuera / 2019)" tem " - " lá dentro.
+    title = _VERSION_PARENS.sub("", raw)
+    title = _VERSION_SUFFIX.sub("", title)
     title = _FEAT_PARENS.sub("", title)
     title = " ".join(title.split()).strip(" -")
     title = title or raw.strip()
@@ -279,7 +280,8 @@ class ImportedTrack:
 
 
 def select_tracks(songs: Iterable[KworbSong], limit: int, max_per_artist: int,
-                  keep_order_rank: bool) -> list[ImportedTrack]:
+                  keep_order_rank: bool, exclude_artists: frozenset[str] = frozenset(),
+                  ) -> list[ImportedTrack]:
     """Filtra repetições e excesso por artista. `keep_order_rank` preserva a posição
     original (lista global); senão a posição é a ordem final do ranking."""
     per_artist: dict[str, int] = {}
@@ -292,6 +294,8 @@ def select_tracks(songs: Iterable[KworbSong], limit: int, max_per_artist: int,
         artist_key = normalize(song.artist)
         if not key or key in seen_titles or (song.spotify_id and song.spotify_id in seen_ids):
             continue
+        if artist_key in exclude_artists:
+            continue  # ex.: faixas de ruído branco na lista global (não são música)
         if per_artist.get(artist_key, 0) >= max_per_artist:
             continue
         per_artist[artist_key] = per_artist.get(artist_key, 0) + 1
@@ -334,16 +338,17 @@ class CategoryResult:
     pool: list[KworbSong] = field(default_factory=list)
 
 
-def build_general(client: KworbClient, url: str, limit: int, max_per_artist: int
-                  ) -> CategoryResult:
+def build_general(client: KworbClient, url: str, limit: int, max_per_artist: int,
+                  exclude_artists: frozenset[str] = frozenset()) -> CategoryResult:
     songs = parse_song_rows(client.get(url))
-    tracks = select_tracks(songs, limit, max_per_artist, keep_order_rank=True)
+    tracks = select_tracks(songs, limit, max_per_artist, keep_order_rank=True,
+                           exclude_artists=exclude_artists)
     return CategoryResult("geral", tracks, url)
 
 
 def build_genre(client: KworbClient, category: str, seeds: list[str],
                 artist_index: dict[str, KworbArtist], limit: int, max_per_artist: int,
-                ) -> CategoryResult:
+                exclude_artists: frozenset[str] = frozenset()) -> CategoryResult:
     unresolved: list[str] = []
     failed: list[str] = []
     partial: list[str] = []
@@ -365,7 +370,8 @@ def build_genre(client: KworbClient, category: str, seeds: list[str],
         pool.extend(KworbSong(s.title, artist.name, s.spotify_id, s.streams)
                     for s in songs if not s.feature)
     pool.sort(key=lambda s: s.streams, reverse=True)
-    tracks = select_tracks(pool, limit, max_per_artist, keep_order_rank=False)
+    tracks = select_tracks(pool, limit, max_per_artist, keep_order_rank=False,
+                           exclude_artists=exclude_artists)
     return CategoryResult(category, tracks, f"{KWORB_BASE}/artist/", unresolved, failed,
                           partial, pool)
 
@@ -445,16 +451,18 @@ def import_kworb(client: KworbClient, out_dir: Path, seeds: dict[str, list[str]]
     categories = list(categories)
     results: list[CategoryResult] = []
     artist_index: dict[str, KworbArtist] | None = None
+    # "excluir" no arquivo de seeds: artistas que nunca entram (ex.: faixas de ruído branco).
+    exclude = frozenset(normalize(name) for name in seeds.get("excluir", []))
     for category in categories:
         log(f"[{category}]")
         if category == "geral":
-            result = build_general(client, general_url, limit, max_per_artist)
+            result = build_general(client, general_url, limit, max_per_artist, exclude)
         else:
             if artist_index is None:
                 artist_index = {normalize(a.name): a for a in parse_artist_rows(
                     client.get(ARTISTS_URL))}
             result = build_genre(client, category, seeds.get(category, []), artist_index,
-                                 limit, max_per_artist)
+                                 limit, max_per_artist, exclude)
         log(f"  {len(result.tracks)} faixas"
             + (f"; artistas não encontrados: {', '.join(result.unresolved_artists)}"
                if result.unresolved_artists else ""))

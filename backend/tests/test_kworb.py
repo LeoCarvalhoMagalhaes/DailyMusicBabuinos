@@ -208,6 +208,18 @@ def test_unexpected_layout_raises_clear_error() -> None:
     ("(I Can't Get No) Satisfaction - Mono Version", "(I Can't Get No) Satisfaction"),
     ("Evidências - Ao Vivo", "Evidências"),
     ("Blinding Lights", "Blinding Lights"),
+    # Casos reais da importação de 14/10/2026:
+    ("Cold Heart - PNAU Remix", "Cold Heart"),
+    ("Sunflower - Spider-Man: Into the Spider-Verse", "Sunflower"),
+    ("Be Like That - feat. Swae Lee & Khalid", "Be Like That"),
+    ("World Hold On (Children Of The Sky) - FISHER Rework",
+     "World Hold On (Children Of The Sky)"),
+    ("Love Tonight (David Guetta Remix Edit)", "Love Tonight"),
+    ("CAN'T STOP THE FEELING! (from DreamWorks Animation's \"TROLLS\")",
+     "CAN'T STOP THE FEELING!"),
+    ("Last Friday Night (T.G.I.F.)", "Last Friday Night (T.G.I.F.)"),
+    ("Your Love (9PM)", "Your Love (9PM)"),
+    ("Liberdade Provisória (Live - Ibirapuera / 2019)", "Liberdade Provisória"),
 ])
 def test_clean_title(raw: str, title: str) -> None:
     cleaned, aliases = clean_title(raw)
@@ -321,3 +333,13 @@ def test_imported_catalog_links_to_spotify_after_the_game(main_harness: Harness,
     assert body["game"]["answer"]["spotify_url"] == (
         f"https://open.spotify.com/track/{secret.spotify_id}"
     )
+
+
+def test_excluded_artists_never_enter_any_list(tmp_path: Path) -> None:
+    seeds = {"rock": ["Queen", "Nirvana"], "excluir": ["Nirvana"]}
+    results = import_kworb(make_client(), tmp_path, seeds, ["geral", "rock"],
+                           retrieved_on=date(2026, 10, 14), limit=5, allow_partial=True,
+                           log=lambda _: None)
+    for result in results:
+        assert "Nirvana" not in {t.artist for t in result.tracks}
+    assert len(results[1].tracks) == 3  # só o Queen sobra no rock

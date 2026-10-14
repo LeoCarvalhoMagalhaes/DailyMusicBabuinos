@@ -30,6 +30,8 @@ _FILE_ORDER = {slug: i for i, slug in enumerate(CATEGORY_SLUGS)}
 
 
 def slugify(text: str) -> str:
+    # Apóstrofo curvo (’) igual ao reto ('): "Don’t" e "Don't" são a mesma faixa.
+    text = text.replace("’", "'")
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
     return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
 
