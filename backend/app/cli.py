@@ -16,12 +16,17 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
+from collections import Counter
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
 
 from app.audio import build_provider
+from app.audio.base import AudioProvider
 from app.catalog_import.kworb import (
     GLOBAL_SONGS_URL,
     KworbClient,
@@ -35,9 +40,65 @@ from app.core.config import get_settings
 from app.core.errors import AudioUnavailableError
 from app.database.migrate import upgrade_to_head
 from app.database.session import build_engine, build_session_factory
-from app.models import MusicTrack, Player
+from app.models import CatalogEntry, MusicTrack, Player
 from app.services.catalog import DATA_DIR, sync_catalog
 from app.services.daily import get_challenge, get_or_create_challenge
+
+
+def check_audio(db: Session, provider: AudioProvider, edition: str, limit: int,
+                delay: float = 0.25, log: Callable[[str], None] = print,
+                sleep: Callable[[float], None] = time.sleep) -> int:
+    """Verifica no provedor as faixas ainda não verificadas que estão em alguma lista
+    ativa. Uma falha temporária (rede/cota) espera e tenta de novo uma vez; se repetir,
+    para sem marcar a faixa como indisponível. Devolve quantas foram verificadas."""
+    active = select(CatalogEntry.track_id).where(CatalogEntry.active.is_(True))
+    tracks = db.scalars(
+        select(MusicTrack)
+        .where(MusicTrack.edition == edition, MusicTrack.availability == "unknown",
+               MusicTrack.id.in_(active))
+        .order_by(MusicTrack.id)
+        .limit(limit)
+    ).all()
+    checked = 0
+    for index, track in enumerate(tracks):
+        if index:
+            sleep(delay)
+        for attempt in (1, 2):
+            try:
+                ok = provider.check_availability(track)
+                break
+            except AudioUnavailableError as exc:
+                if attempt == 2:
+                    log(f"ERRO {track.slug}: {exc.message} (parando; rode de novo mais tarde)")
+                    db.commit()
+                    return checked
+                sleep(5)
+        checked += 1
+        log(f"{'OK ' if ok else 'N/D'} {track.artist} — {track.title}")
+        if checked % 25 == 0:
+            db.commit()
+    db.commit()
+    return checked
+
+
+def audio_summary(db: Session, edition: str) -> dict[str, Counter[str]]:
+    """Disponibilidade de áudio por categoria (só listas ativas)."""
+    rows = db.execute(
+        select(CatalogEntry.category, MusicTrack.availability)
+        .join(MusicTrack, MusicTrack.id == CatalogEntry.track_id)
+        .where(CatalogEntry.active.is_(True), MusicTrack.edition == edition)
+    ).all()
+    summary: dict[str, Counter[str]] = {slug: Counter() for slug in CATEGORY_SLUGS}
+    for category, availability in rows:
+        summary.setdefault(category, Counter())[availability] += 1
+    return summary
+
+
+def print_audio_summary(db: Session, edition: str) -> None:
+    print("\nCategoria    com prévia  sem prévia  não verificadas")
+    for category, counts in audio_summary(db, edition).items():
+        print(f"{category:<12} {counts['available']:>10}  {counts['unavailable']:>10}  "
+              f"{counts['unknown']:>15}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -48,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("publish-today")
     check = sub.add_parser("check-audio")
     check.add_argument("--limit", type=int, default=50)
+    check.add_argument("--delay", type=float, default=0.25,
+                       help="Segundos entre faixas (respeita a cota do Deezer)")
     reveal = sub.add_parser("reveal")
     reveal.add_argument("--category", choices=CATEGORY_SLUGS, required=True)
     reveal.add_argument("--json", action="store_true")
@@ -99,20 +162,8 @@ def main(argv: list[str] | None = None) -> int:
                                              clock.now())
                 print(f"{category}: desafio #{ch.id} publicado para {ch.challenge_date}")
         elif args.command == "check-audio":
-            tracks = db.scalars(
-                select(MusicTrack)
-                .where(MusicTrack.edition == settings.catalog_edition,
-                       MusicTrack.availability == "unknown")
-                .limit(args.limit)
-            ).all()
-            for track in tracks:
-                try:
-                    ok = provider.check_availability(track)
-                    print(f"{'OK ' if ok else 'N/D'} {track.artist} — {track.title}")
-                except AudioUnavailableError as exc:
-                    print(f"ERRO {track.slug}: {exc.message}")
-                    break
-            db.commit()
+            check_audio(db, provider, settings.catalog_edition, args.limit, args.delay)
+            print_audio_summary(db, settings.catalog_edition)
         elif args.command == "reveal":
             ch = get_challenge(db, args.category, clock.today(), settings.catalog_edition)
             if ch is None:
