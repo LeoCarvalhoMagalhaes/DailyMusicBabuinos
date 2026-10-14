@@ -1,4 +1,11 @@
-"""Importador do kworb, testado com páginas simuladas no formato das tabelas do site."""
+"""Importador do kworb, testado com páginas simuladas a partir de trechos reais do site.
+
+O formato foi conferido em 14/10/2026 (dados do kworb de 13/10/2026):
+- songs.html: "<div>Artista - Título</div>" em texto, sem links;
+- artists.html: link "/spotify/artist/<id>_songs.html" com o nome;
+- artist/<id>_songs.html: tabela-resumo (Streams/Daily/Tracks) e depois a lista, com link
+  "https://open.spotify.com/track/<id>" e "* " antes das participações.
+"""
 
 from __future__ import annotations
 
@@ -39,49 +46,67 @@ def table(rows: list[str], header: str) -> str:
     )
 
 
-def global_row(artist: str, artist_id: str, title: str, track_id: str, streams: int) -> str:
+def global_row(artist: str, title: str, streams: int) -> str:
+    # Linha real: <tr><td class="text"><div>The Weeknd - Blinding Lights</div></td>
+    # <td>5,632,731,972</td><td>1,455,905</td></tr>
     return (
-        f'<tr><td class="text"><div><a href="artist/{artist_id}_songs.html">{artist}</a> - '
-        f'<a href="https://open.spotify.com/track/{track_id}">{title}</a></div></td>'
-        f"<td>{streams:,}</td><td>1,234</td></tr>"
+        f'<tr><td class="text"><div>{artist} - {title}</div></td>'
+        f"<td>{streams:,}</td><td>1,455,905</td></tr>"
+    )
+
+
+def artist_row(name: str, artist_id: str, streams_millions: str) -> str:
+    return (
+        f'<tr>\n<td class="text"><div><a href="/spotify/artist/{artist_id}_songs.html">{name}'
+        f"</a></div></td>\n<td>{streams_millions}</td>\n<td>57.688</td>\n"
+        '<td class="smaller">98,510.0</td>\n<td class="smaller">55,617.6</td>\n'
+        '<td class="smaller">44,282.3</td></tr>\n'
     )
 
 
 def artist_song_row(title: str, track_id: str, streams: int, feature: bool = False) -> str:
-    star = "*" if feature else ""
+    star = "* " if feature else ""
     return (
-        f'<tr><td class="text"><div>{star}<a href="../track/{track_id}.html">{title}</a></div>'
-        f"</td><td>{streams:,}</td><td>99</td></tr>"
+        f'<tr><td class="text"><div>{star}<a href="https://open.spotify.com/track/{track_id}" '
+        f'target="_blank">{title}</a></div></td><td>{streams:,}</td><td>980,555</td></tr>'
     )
 
 
+# Tabela-resumo que abre a página de cada artista (deve ser ignorada).
+ARTIST_SUMMARY = (
+    '<table style="width: 580px;"><thead><tr><th class="text"></th><th>Total</th>'
+    "<th>As lead</th><th>Solo</th><th>As feature (*)</th></tr></thead><tbody>"
+    '<tr><td class="text">Streams</td><td>30,065,864,559</td><td class="smaller">'
+    '29,980,888,398</td><td class="smaller">27,541,171,826</td><td class="smaller">'
+    "84,976,161</td></tr>"
+    '<tr><td class="text">Tracks</td><td>635</td><td class="smaller">631</td>'
+    '<td class="smaller">559</td><td class="smaller">4</td></tr></tbody></table>'
+)
+
 GLOBAL_HTML = table(
     [
-        global_row("The Weeknd", sid(1), "Blinding Lights", sid(101), 5_000_000_000),
-        global_row("Ed Sheeran", sid(2), "Shape of You", sid(102), 4_800_000_000),
-        global_row("The Weeknd", sid(1), "Starboy", sid(103), 3_900_000_000),
-        global_row("The Weeknd", sid(1), "Save Your Tears", sid(104), 3_800_000_000),
-        global_row("The Weeknd", sid(1), "The Hills", sid(105), 3_000_000_000),  # 4ª: pula
-        global_row("Queen", sid(3), "Bohemian Rhapsody - Remastered 2011", sid(106),
-                   2_900_000_000),
-        global_row("Ed Sheeran", sid(2), "Shape of You", sid(107), 1_000_000_000),  # repetida
+        global_row("The Weeknd", "Blinding Lights", 5_632_731_972),
+        global_row("Ed Sheeran", "Shape of You", 5_140_610_305),
+        global_row("The Weeknd", "Starboy", 4_808_854_299),
+        global_row("The Weeknd", "Save Your Tears", 3_800_000_000),
+        global_row("The Weeknd", "The Hills", 3_000_000_000),  # 4ª do artista: pula
+        global_row("Queen", "Bohemian Rhapsody - Remastered 2011", 2_900_000_000),
+        global_row("Ed Sheeran", "Shape of You", 1_000_000_000),  # repetida
     ],
-    "<th>Artist and Title</th><th>Streams</th><th>Daily</th>",
+    '<th class="text">Artist and Title</th>\n<th>Streams</th>\n<th>Daily</th>\n',
 )
 
 ARTISTS_HTML = table(
     [
-        f'<tr><td class="text"><div><a href="artist/{sid(3)}_songs.html">Queen</a></div></td>'
-        "<td>40,000,000,000</td></tr>",
-        f'<tr><td class="text"><div><a href="artist/{sid(4)}_songs.html">Nirvana</a></div>'
-        "</td><td>10,000,000,000</td></tr>",
-        f'<tr><td class="text"><div><a href="artist/{sid(5)}_songs.html">Chitãozinho &amp; '
-        "Xororó</a></div></td><td>3,000,000,000</td></tr>",
+        artist_row("Queen", sid(3), "30,065.9"),
+        artist_row("Nirvana", sid(4), "10,000.0"),
+        artist_row("Chitãozinho &amp; Xororó", sid(5), "3,000.0"),
     ],
-    "<th>Artist</th><th>Streams</th>",
+    '<th class="text">Artist</th>\n<th>Streams</th>\n<th>Daily</th>\n<th>As lead</th>\n'
+    "<th>Solo</th>\n<th>As feature</th>\n",
 )
 
-QUEEN_HTML = table(
+QUEEN_HTML = ARTIST_SUMMARY + table(
     [
         artist_song_row("Bohemian Rhapsody - Remastered 2011", sid(201), 2_900_000_000),
         artist_song_row("Don't Stop Me Now - Remastered 2011", sid(202), 2_000_000_000),
@@ -92,7 +117,7 @@ QUEEN_HTML = table(
     "<th>Song Title</th><th>Streams</th><th>Daily</th>",
 )
 
-NIRVANA_HTML = table(
+NIRVANA_HTML = ARTIST_SUMMARY + table(
     [
         artist_song_row("Smells Like Teen Spirit", sid(301), 2_100_000_000),
         artist_song_row("Come As You Are", sid(302), 1_200_000_000),
@@ -127,9 +152,24 @@ def make_client(pages: dict[str, str] = PAGES, cache: Path | None = None,
 
 def test_parse_global_songs_list() -> None:
     songs = parse_song_rows(GLOBAL_HTML)
-    assert songs[0] == KworbSong("Blinding Lights", "The Weeknd", sid(101), 5_000_000_000)
+    # A lista global não tem link da faixa: o id do Spotify fica vazio.
+    assert songs[0] == KworbSong("Blinding Lights", "The Weeknd", None, 5_632_731_972)
     assert songs[5].title == "Bohemian Rhapsody - Remastered 2011"
+    assert songs[5].artist == "Queen"
     assert len(songs) == 7
+
+
+def test_parse_global_row_with_dash_in_title() -> None:
+    html = table([global_row("Post Malone", "Sunflower - Spider-Man: Into the Spider-Verse",
+                             4_510_725_961)], "<th>Artist and Title</th>")
+    song = parse_song_rows(html)[0]
+    assert (song.artist, song.title) == ("Post Malone",
+                                         "Sunflower - Spider-Man: Into the Spider-Verse")
+
+
+def test_artist_page_summary_table_is_ignored() -> None:
+    songs = parse_song_rows(NIRVANA_HTML, default_artist="Nirvana")
+    assert [s.title for s in songs] == ["Smells Like Teen Spirit", "Come As You Are"]
 
 
 def test_parse_artist_page_marks_features() -> None:
@@ -148,6 +188,7 @@ def test_parse_artists_and_resolve_names() -> None:
     assert resolve_artist("Chitãozinho & Xororó", index).artist_id == sid(5)
     assert resolve_artist("Nirvana & Amigos", index).artist_id == sid(4)  # tenta as partes
     assert resolve_artist("Desconhecido", index) is None
+    assert artists["queen"].artist_id == sid(3)
     manual = resolve_artist(f"Racionais MC's|{sid(9)}", index)
     assert manual.name == "Racionais MC's" and manual.artist_id == sid(9)
 
@@ -216,6 +257,33 @@ def test_import_writes_chart_catalog_files(tmp_path: Path) -> None:
     spec = bundle.tracks["queen--bohemian-rhapsody"]
     assert spec.categories == {"rock": 1, "geral": 6}  # posição em cada lista
     assert spec.spotify_id == sid(201)
+
+    # Geral: sem link no kworb; o id vem das páginas de artista já baixadas, quando existe.
+    geral = json.loads((tmp_path / "geral.json").read_text(encoding="utf-8"))["tracks"]
+    by_title = {t["title"]: t for t in geral}
+    assert by_title["Bohemian Rhapsody"]["spotify_id"] == sid(201)
+    assert "spotify_id" not in by_title["Blinding Lights"]
+
+
+def test_import_warns_about_partial_name_matches(tmp_path: Path) -> None:
+    logs: list[str] = []
+    results = import_kworb(make_client(), tmp_path, {"rock": ["Nirvana & Amigos"]}, ["rock"],
+                           retrieved_on=date(2026, 10, 14), limit=2, allow_partial=True,
+                           log=logs.append)
+    assert results[0].partial_matches == ["Nirvana & Amigos -> Nirvana"]
+    assert any("Nirvana & Amigos -> Nirvana" in line for line in logs)
+
+
+def test_track_without_spotify_id_links_to_spotify_search() -> None:
+    from app.models import MusicTrack
+    from app.services.game import spotify_link
+
+    main = MusicTrack(title="Blinding Lights", artist="The Weeknd", edition="main")
+    assert spotify_link(main) == "https://open.spotify.com/search/Blinding%20Lights%20The%20Weeknd"
+    main.spotify_id = sid(101)
+    assert spotify_link(main) == f"https://open.spotify.com/track/{sid(101)}"
+    assert spotify_link(MusicTrack(title="Greensleeves", artist="Tradicional",
+                                   edition="demo")) is None
 
 
 def test_import_refuses_incomplete_categories(tmp_path: Path) -> None:

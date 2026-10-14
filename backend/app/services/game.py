@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
+from urllib.parse import quote
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -19,7 +20,7 @@ from sqlalchemy.orm import Session
 from app.audio.base import AudioProvider
 from app.core.config import Settings
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError
-from app.models import GameGuess, GameSession, Player
+from app.models import GameGuess, GameSession, MusicTrack, Player
 from app.services import answers
 from app.services.catalog import catalog_index
 from app.services.daily import get_or_create_challenge
@@ -168,7 +169,17 @@ def reveal_answer(game: GameSession, provider: AudioProvider) -> RevealedAnswer:
         raise ForbiddenError("A resposta só aparece no fim da partida.", code="game_in_progress")
     track = game.challenge.track
     meta = provider.metadata(track)
-    spotify_url = f"https://open.spotify.com/track/{track.spotify_id}" if track.spotify_id else None
-    return RevealedAnswer(track.title, track.artist, meta.cover_url, meta.external_url, spotify_url,
-                          meta.attribution)
+    return RevealedAnswer(track.title, track.artist, meta.cover_url, meta.external_url,
+                          spotify_link(track), meta.attribution)
+
+
+def spotify_link(track: MusicTrack) -> str | None:
+    """Link "Ouvir no Spotify" do fim da partida. Faixas do catálogo principal sem id
+    (parte da lista global do kworb não traz link) recebem uma busca no Spotify; as
+    melodias do modo demonstração não têm link."""
+    if track.spotify_id:
+        return f"https://open.spotify.com/track/{track.spotify_id}"
+    if track.edition == "main":
+        return "https://open.spotify.com/search/" + quote(f"{track.title} {track.artist}")
+    return None
 

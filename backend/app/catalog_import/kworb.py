@@ -8,7 +8,9 @@ da faixa no Spotify.
 
 Metodologia:
 - Geral: as músicas mais tocadas de todos os tempos no Spotify (lista global do kworb), na
-  ordem do kworb; posição = posição no kworb.
+  ordem do kworb; posição = posição no kworb. Essa página traz só "Artista - Título" em
+  texto (sem link da faixa); o id do Spotify é completado com as páginas de artista
+  baixadas para os gêneros, quando a música aparece nelas.
 - Gêneros: o kworb não classifica por gênero. Cada categoria tem uma lista editorial de
   artistas do gênero (app/data/kworb_seeds.json). Juntamos as músicas desses artistas
   (como artista principal), ordenamos pelo total de streams no Spotify e ficamos com as 100
@@ -119,7 +121,7 @@ def _to_int(text: str) -> int | None:
 class KworbSong:
     title: str
     artist: str
-    spotify_id: str
+    spotify_id: str | None
     streams: int
     feature: bool = False
 
@@ -131,25 +133,31 @@ class KworbArtist:
 
 
 def parse_song_rows(html: str, default_artist: str | None = None) -> list[KworbSong]:
-    """Linhas com link de faixa do Spotify e total de streams.
+    """Linhas com a música e o total de streams (primeira coluna numérica depois dela).
 
-    Serve para a lista global ("Artista - Título") e para a página de músicas de um
-    artista (só o título; participações aparecem marcadas com "*")."""
+    Serve para a página de músicas de um artista (link da faixa no Spotify; participações
+    marcadas com "*") e para a lista global, que traz só o texto "Artista - Título", sem
+    link (formato conferido em 14/10/2026); nesse caso `spotify_id` fica vazio."""
     songs: list[KworbSong] = []
     for row in parse_rows(html):
         for index, cell in enumerate(row):
-            track_links = [(h, t) for h, t in cell.links if TRACK_ID_RE.search(h)]
-            if not track_links:
-                continue
-            href, title = track_links[0]
-            artist_links = [t for h, t in cell.links if ARTIST_ID_RE.search(h) and t]
-            artist = artist_links[0] if artist_links else default_artist
-            if not artist and " - " in cell.text:
-                artist = cell.text.split(" - ", 1)[0].strip()
             streams = next(
                 (n for c in row[index + 1:] if (n := _to_int(c.text)) is not None), None
             )
-            spotify_id = TRACK_ID_RE.search(href).group(1)  # type: ignore[union-attr]
+            track_links = [(h, t) for h, t in cell.links if TRACK_ID_RE.search(h)]
+            spotify_id: str | None
+            if track_links:
+                href, title = track_links[0]
+                spotify_id = TRACK_ID_RE.search(href).group(1)  # type: ignore[union-attr]
+                artist_links = [t for h, t in cell.links if ARTIST_ID_RE.search(h) and t]
+                artist = artist_links[0] if artist_links else default_artist
+                if not artist and " - " in cell.text:
+                    artist = cell.text.split(" - ", 1)[0].strip()
+            elif default_artist is None and " - " in cell.text and streams is not None:
+                artist, title = (part.strip() for part in cell.text.split(" - ", 1))
+                spotify_id = None
+            else:
+                continue
             if artist and title and streams is not None:
                 songs.append(KworbSong(title=title, artist=artist, spotify_id=spotify_id,
                                        streams=streams,
@@ -255,15 +263,16 @@ class KworbClient:
 class ImportedTrack:
     title: str
     artist: str
-    spotify_id: str
+    spotify_id: str | None
     streams: int
     rank: int
     aliases: list[str]
 
     def to_json(self, category: str) -> dict:
-        data: dict = {"title": self.title, "artist": self.artist, "rank": self.rank,
-                      "spotify_id": self.spotify_id, "streams": self.streams,
-                      "genres": [CATEGORY_NAMES[category].lower()]}
+        data: dict = {"title": self.title, "artist": self.artist, "rank": self.rank}
+        if self.spotify_id:
+            data["spotify_id"] = self.spotify_id
+        data |= {"streams": self.streams, "genres": [CATEGORY_NAMES[category].lower()]}
         if self.aliases:
             data["aliases"] = self.aliases
         return data
@@ -281,13 +290,14 @@ def select_tracks(songs: Iterable[KworbSong], limit: int, max_per_artist: int,
         title, aliases = clean_title(song.title)
         key = normalize(title)
         artist_key = normalize(song.artist)
-        if not key or song.spotify_id in seen_ids or key in seen_titles:
+        if not key or key in seen_titles or (song.spotify_id and song.spotify_id in seen_ids):
             continue
         if per_artist.get(artist_key, 0) >= max_per_artist:
             continue
         per_artist[artist_key] = per_artist.get(artist_key, 0) + 1
         seen_titles.add(key)
-        seen_ids.add(song.spotify_id)
+        if song.spotify_id:
+            seen_ids.add(song.spotify_id)
         rank = position if keep_order_rank else len(selected) + 1
         selected.append(ImportedTrack(title, song.artist, song.spotify_id, song.streams, rank,
                                       aliases))
@@ -318,6 +328,10 @@ class CategoryResult:
     source_url: str
     unresolved_artists: list[str] = field(default_factory=list)
     failed_artists: list[str] = field(default_factory=list)
+    # Seeds achados só por parte do nome (ex.: "A & B" -> "A"): confira se é o artista certo.
+    partial_matches: list[str] = field(default_factory=list)
+    # Todas as músicas lidas nas páginas de artista (para completar ids da Geral).
+    pool: list[KworbSong] = field(default_factory=list)
 
 
 def build_general(client: KworbClient, url: str, limit: int, max_per_artist: int
@@ -332,12 +346,15 @@ def build_genre(client: KworbClient, category: str, seeds: list[str],
                 ) -> CategoryResult:
     unresolved: list[str] = []
     failed: list[str] = []
+    partial: list[str] = []
     pool: list[KworbSong] = []
     for seed in seeds:
         artist = resolve_artist(seed, artist_index)
         if artist is None:
             unresolved.append(seed)
             continue
+        if "|" not in seed and normalize(artist.name) != normalize(seed):
+            partial.append(f"{seed} -> {artist.name}")
         url = f"{KWORB_BASE}/artist/{artist.artist_id}_songs.html"
         try:
             songs = parse_song_rows(client.get(url), default_artist=artist.name)
@@ -349,7 +366,24 @@ def build_genre(client: KworbClient, category: str, seeds: list[str],
                     for s in songs if not s.feature)
     pool.sort(key=lambda s: s.streams, reverse=True)
     tracks = select_tracks(pool, limit, max_per_artist, keep_order_rank=False)
-    return CategoryResult(category, tracks, f"{KWORB_BASE}/artist/", unresolved, failed)
+    return CategoryResult(category, tracks, f"{KWORB_BASE}/artist/", unresolved, failed,
+                          partial, pool)
+
+
+def fill_spotify_ids(result: CategoryResult, songs: Iterable[KworbSong]) -> int:
+    """Completa o id do Spotify das faixas sem link (lista global) com as músicas lidas
+    nas páginas de artista: mesmo artista e mesmo título limpo. Devolve quantas achou."""
+    known: dict[tuple[str, str], str] = {}
+    for song in songs:
+        if song.spotify_id:
+            key = (normalize(song.artist), normalize(clean_title(song.title)[0]))
+            known.setdefault(key, song.spotify_id)
+    filled = 0
+    for track in result.tracks:
+        if not track.spotify_id:
+            track.spotify_id = known.get((normalize(track.artist), normalize(track.title)))
+            filled += track.spotify_id is not None
+    return filled
 
 
 def methodology(category: str, source_url: str, max_per_artist: int) -> str:
@@ -424,7 +458,18 @@ def import_kworb(client: KworbClient, out_dir: Path, seeds: dict[str, list[str]]
         log(f"  {len(result.tracks)} faixas"
             + (f"; artistas não encontrados: {', '.join(result.unresolved_artists)}"
                if result.unresolved_artists else ""))
+        if result.partial_matches:
+            log(f"  confira (achados por parte do nome): {', '.join(result.partial_matches)}")
+        if result.failed_artists:
+            log(f"  páginas que falharam: {', '.join(result.failed_artists)}")
         results.append(result)
+    pool = [song for r in results for song in r.pool]
+    for result in results:
+        missing = sum(1 for t in result.tracks if not t.spotify_id)
+        if missing:
+            filled = fill_spotify_ids(result, pool)
+            log(f"[{result.category}] id do Spotify completado em {filled} de {missing} "
+                "faixas sem link")
     short = [r for r in results if len(r.tracks) < limit]
     if short and not allow_partial:
         detail = ", ".join(f"{r.category} ({len(r.tracks)})" for r in short)
