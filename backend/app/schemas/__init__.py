@@ -191,3 +191,42 @@ class HealthOut(BaseModel):
     audio_provider: str
     catalog_edition: str
     version: str
+
+
+# ----------------------------------------------------------------- modo ilimitado
+
+class EndlessNextIn(BaseModel):
+    category: CategorySlug
+    # Sessão de jogo atual (placar da sessão). Vazio inicia uma nova.
+    run_id: str | None = Field(default=None, max_length=36)
+
+
+class RunSummaryOut(BaseModel):
+    run_id: str
+    rounds: int
+    wins: int
+    score: int
+    current_streak: int
+    best_streak: int
+
+
+class EndlessRound(BaseModel):
+    game: GameState
+    run: RunSummaryOut
+
+
+class EndlessStatsBlock(BaseModel):
+    category: str
+    rounds: int
+    wins: int
+    win_rate: float
+    total_score: int
+    average_score: float
+    current_streak: int
+    best_streak: int
+    distribution: list[int]
+
+
+class EndlessStatsOut(BaseModel):
+    overall: EndlessStatsBlock
+    categories: list[EndlessStatsBlock]

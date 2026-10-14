@@ -54,6 +54,26 @@ class Settings(BaseSettings):
     repeat_window_days: int = 60
     artist_cooldown_days: int = 7
 
+    # Modo ilimitado: quantas músicas recentes do jogador (por categoria) evitar.
+    endless_recent_window: int = 50
+
+    # Multiplayer (ver docs/06-modos-de-jogo.md). O número de músicas por categoria é
+    # fixo em 3 (18 por partida), como pede a especificação.
+    mp_min_players: int = 2
+    mp_max_players: int = 8
+    mp_round_seconds: float = 60.0
+    mp_reveal_seconds: float = 8.0
+    mp_speed_bonus_max: int = 50
+    # Partida sem nenhum jogador ativo por esse tempo é encerrada (abandono).
+    mp_idle_minutes: float = 10.0
+    # Sala de espera sem atividade por esse tempo é fechada.
+    mp_room_idle_minutes: float = 30.0
+    auth_session_days: int = 30
+    # Laço do servidor em tempo real (avança rodadas pelo relógio e avisa os clientes).
+    realtime_enabled: bool = True
+    realtime_interval_seconds: float = 0.5
+    rate_limit_auth_per_hour: int = 30
+
     audio_provider: AudioProviderName = "deezer"
     audio_local_dir: str = "./audio-local"
     audio_cache_ttl_seconds: int = 600

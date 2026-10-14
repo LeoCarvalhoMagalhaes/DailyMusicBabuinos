@@ -41,7 +41,8 @@ def challenge_number(settings: Settings, day: date) -> int:
     return (day - settings.launch_date).days + 1
 
 
-def _candidates(db: Session, category: str, edition: str) -> list[MusicTrack]:
+def candidates(db: Session, category: str, edition: str) -> list[MusicTrack]:
+    """Faixas ativas da categoria que não foram marcadas como sem áudio."""
     return list(
         db.scalars(
             select(MusicTrack)
@@ -81,7 +82,7 @@ def rank_candidates(settings: Settings, edition: str, category: str, day: date,
 def select_track(db: Session, settings: Settings, provider: AudioProvider, category: str,
                  day: date) -> MusicTrack:
     edition = settings.catalog_edition
-    tracks = _candidates(db, category, edition)
+    tracks = candidates(db, category, edition)
     if not tracks:
         raise NotFoundError("Não há músicas disponíveis para esta categoria.",
                             code="empty_catalog")
@@ -115,6 +116,17 @@ def select_track(db: Session, settings: Settings, provider: AudioProvider, categ
         position = {t.id: i for i, t in enumerate(ranked)}
         ordered = sorted(pool, key=lambda t: (last_used.get(t.id, date.min), position[t.id]))
 
+    track = first_playable(db, provider, ordered)
+    if track is None:
+        raise AppError("Nenhuma música com áudio disponível para hoje.",
+                       code="no_playable_track", status_code=503)
+    return track
+
+
+def first_playable(db: Session, provider: AudioProvider, ordered: list[MusicTrack]
+                   ) -> MusicTrack | None:
+    """Primeira faixa da lista com áudio confirmado no provedor. Usado pelos três
+    modos de jogo, para que todos só sorteiem músicas que tocam."""
     # Limita quantas faixas ainda não verificadas consultamos no provedor por sorteio.
     unchecked = [t.id for t in ordered if t.availability != "available"]
     checkable = set(unchecked[:MAX_AVAILABILITY_CHECKS])
@@ -128,14 +140,13 @@ def select_track(db: Session, settings: Settings, provider: AudioProvider, categ
                 db.flush()
                 return track
         except AudioUnavailableError:
-            # Provedor fora do ar: não dá para validar, publica a melhor candidata e o
+            # Provedor fora do ar: não dá para validar, usa a melhor candidata e o
             # jogador pode tentar ouvir de novo mais tarde (tentativas não são consumidas).
             logger.warning("Provedor indisponível ao validar %s; seguindo sem validação",
                            track.slug)
             return track
         db.flush()
-    raise AppError("Nenhuma música com áudio disponível para hoje.", code="no_playable_track",
-                   status_code=503)
+    return None
 
 
 def get_challenge(db: Session, category: str, day: date, edition: str) -> DailyChallenge | None:

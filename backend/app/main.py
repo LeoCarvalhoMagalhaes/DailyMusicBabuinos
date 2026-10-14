@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
-from app.api.routes import games, public
+from app.api.routes import endless, games, public
 from app.audio import build_provider
 from app.core.clock import Clock
 from app.core.config import DEV_SECRET, Settings, get_settings
@@ -83,6 +83,7 @@ def create_app(settings: Settings | None = None, *, clock: Clock | None = None,
     install_error_handlers(app)
     app.include_router(public.router)
     app.include_router(games.router)
+    app.include_router(endless.router)
     return app
 
 
