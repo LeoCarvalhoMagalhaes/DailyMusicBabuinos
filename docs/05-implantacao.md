@@ -74,7 +74,33 @@ Consequências para o jogo:
 
 Nenhuma credencial real é versionada. O Deezer não exige chave de API.
 
-## Passo a passo — GitHub Pages + Render
+## Publicação atual (14/10/2026)
+
+| Peça | Onde | Endereço |
+| --- | --- | --- |
+| Site | GitHub Pages (workflow `pages.yml`) | https://leocarvalhomagalhaes.github.io/DailyMusicBabuinos/ |
+| API | Render, Web Service **criado à mão** (Docker, plano Free) | https://dailymusicbabuinos.onrender.com |
+| Banco | Neon, plano Free (sem cartão, sem data de expiração) | connection string só na variável `DATABASE_URL` do Render |
+
+Por que não o Blueprint: o fluxo **Blueprint** do Render pediu cartão (verificação de conta),
+mesmo com tudo em `plan: free`. Criar o Web Service manualmente não pede. O `render.yaml`
+continua no repositório para quem tiver cartão cadastrado.
+
+Web Service manual no Render: **New → Web Service** → repositório → Branch `main`,
+Language `Docker`, Root Directory `backend`, Instance Type **Free**, Health Check Path
+`/api/health`, variáveis `DATABASE_URL` (Neon, com `?sslmode=require`), `APP_ENV=production`,
+`AUDIO_PROVIDER=deezer`, `CHALLENGE_TIMEZONE=America/Sao_Paulo`,
+`CORS_ORIGINS=https://leocarvalhomagalhaes.github.io` e `CHALLENGE_SECRET` (aleatório, nunca
+mude). O site recebe a URL da API pela variável do repositório `API_BASE_URL`.
+
+Verificado no ar em 14/10/2026: `/api/health` com `database: ok`; diário com trechos reais
+de 1,019 s e 2,011 s, resposta com link do Spotify e partida mantida após recarregar;
+ilimitado com a próxima rodada; multiplayer com dois navegadores (desktop e celular),
+WebSocket "Ao vivo" nos dois, mesma resposta revelada para ambos e rodada 2 aberta pelo
+servidor; nenhum erro de console. O teste criou as contas `teste_claude_a` e
+`teste_claude_b` (podem ficar ou ser removidas do banco).
+
+## Passo a passo — GitHub Pages + Render (Blueprint)
 
 1. **API no Render:** entre em <https://render.com> com a conta do GitHub, escolha
    **New → Blueprint** e o repositório `DailyMusicBabuinos` (branch `main`). O Render lê o
@@ -173,7 +199,6 @@ docker run -p 8000:8000 \
 
 ## O que ainda depende de você
 
-- **Deploy real** (Render/Neon/Cloudflare): depende das suas contas.
 - **Build da imagem Docker / `docker compose up --build`:** a máquina usada não tem Docker.
   O comando da imagem foi exercitado diretamente contra PostgreSQL (acima), mas o
   `docker build` em si não rodou.
