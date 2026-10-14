@@ -17,6 +17,8 @@ recebe a URL da prévia nem o arquivo completo antes do fim da partida.
 from __future__ import annotations
 
 import logging
+import re
+import unicodedata
 from datetime import UTC, datetime
 
 import httpx
@@ -30,6 +32,19 @@ from app.services.answers import normalize, variants
 logger = logging.getLogger("babuinos.audio.deezer")
 
 MAX_PREVIEW_BYTES = 2 * 1024 * 1024
+
+# Palavras que indicam uma versão diferente da gravação original.
+_VERSION_WORDS = re.compile(
+    r"\b(live|ao vivo|en vivo|karaoke|instrumental|remix|acoustic|acustico|cover|tribute|"
+    r"demo|sped up|slowed|reverb|8d|orchestral|piano version|unplugged)\b"
+)
+
+
+def _versions(text: str) -> set[str]:
+    """Marcas de versão num texto (minúsculas, sem acentos; mantém sufixos como
+    "- Acoustic Version", que `normalize` removeria)."""
+    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+    return set(_VERSION_WORDS.findall(plain))
 
 
 class DeezerProvider(AudioProvider):
@@ -62,32 +77,49 @@ class DeezerProvider(AudioProvider):
         return payload
 
     def _search(self, track: MusicTrack) -> dict | None:
-        query = f'artist:"{track.artist}" track:"{track.title}"'
-        data = self._api("/search", {"q": query, "limit": 10}).get("data", [])
-        if not data:
-            data = self._api("/search", {"q": f"{track.artist} {track.title}", "limit": 10}).get(
-                "data", []
-            )
+        # Busca simples primeiro: em 14/10/2026 o filtro avançado `artist:"..."` da API
+        # real não funcionava (com `track:` voltava vazio). Ele fica como segunda tentativa.
+        queries = [f"{track.artist} {track.title}",
+                   f'artist:"{track.artist}" track:"{track.title}"']
+        for query in queries:
+            data = self._api("/search", {"q": query, "limit": 25}).get("data", [])
+            item = self._best_match(track, data)
+            if item:
+                return item
+        return None
+
+    def _best_match(self, track: MusicTrack, data: list[dict]) -> dict | None:
+        """Escolhe a gravação original: mesmo título, artista certo e, entre as versões do
+        próprio artista (o `title_short` de "Bohemian Rhapsody (Live Aid)" é igual ao da
+        original), a de estúdio mais popular. Covers e karaokê de outros artistas nunca
+        entram, porque o artista precisa bater."""
         wanted_titles = variants(track.title)
         for alias in track.aliases:
             wanted_titles |= variants(alias)
+        # Se o próprio catálogo pede uma versão (ex.: "Evidências - Ao Vivo"), ela vale.
+        allowed_versions = _versions(" ".join([track.title, *track.aliases]))
         full_artist = normalize(track.artist)
         # "Kenny Rogers & Dolly Parton" -> aceita cada artista principal individualmente.
         exact_artists = {full_artist, *(a.strip() for a in full_artist.split(" and "))}
-        best: tuple[int, dict] | None = None
+        best: tuple[tuple[int, int, int], dict] | None = None
         for item in data:
             artist = normalize((item.get("artist") or {}).get("name", ""))
             titles = variants(item.get("title_short") or item.get("title") or "")
             if not artist or not item.get("preview") or not titles & wanted_titles:
                 continue
             if artist in exact_artists:
-                score = 2
+                artist_score = 2
             elif artist in full_artist or full_artist in artist:
-                score = 1  # ex.: "Jimi Hendrix" vs "The Jimi Hendrix Experience"
+                artist_score = 1  # ex.: "Jimi Hendrix" vs "The Jimi Hendrix Experience"
             else:
                 continue
-            if best is None or score > best[0]:
-                best = (score, item)
+            unwanted = _versions(" ".join([
+                item.get("title_version") or "", item.get("title") or "",
+                (item.get("album") or {}).get("title") or "",
+            ])) - allowed_versions
+            key = (artist_score, 0 if unwanted else 1, int(item.get("rank") or 0))
+            if best is None or key > best[0]:
+                best = (key, item)
         return best[1] if best else None
 
     def _apply(self, track: MusicTrack, item: dict) -> None:

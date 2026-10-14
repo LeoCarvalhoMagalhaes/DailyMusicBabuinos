@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 import httpx
 import numpy as np
@@ -62,6 +63,47 @@ def test_trim_mp3_removes_metadata_and_limits_duration() -> None:
     assert clip.startswith(FRAME_HEADER)
     assert len(clip) % FRAME_LEN == 0
     assert mp3_duration(data) == pytest.approx(30, abs=0.05)
+
+
+def real_layout_preview(seconds: float = 30.0) -> bytes:
+    """MP3 gerado com o mesmo layout de uma prévia real do Deezer (medida em 14/10/2026):
+    tag ID3v2.4 vazia de 10 bytes, sem quadro Xing/Info e sem ID3v1, quadros MPEG-1
+    Layer III de 128 kbps / 44,1 kHz em joint stereo, com padding alternado (417/418 bytes).
+    O conteúdo dos quadros é sintético: nenhum áudio de terceiros fica no repositório."""
+    out = bytearray(b"ID3\x04\x00\x00\x00\x00\x00\x00")
+    elapsed, index = 0.0, 0
+    while elapsed < seconds:
+        padding = 1 - index % 2  # o 1º quadro da prévia real tem padding
+        header = bytes([0xFF, 0xFB, 0x90 | (padding << 1), 0x64])
+        out += header + bytes([0x22]) * (FRAME_LEN - 4 + padding)
+        elapsed += FRAME_DURATION
+        index += 1
+    return bytes(out)
+
+
+def test_trim_real_deezer_layout() -> None:
+    data = real_layout_preview()
+    header = parse_header(data, 10)
+    assert header is not None and header.channel_mode == 1 and header.length == FRAME_LEN + 1
+    assert mp3_duration(data) == pytest.approx(30, abs=0.05)
+    for stage in (1, 2, 3, 5, 8, 12):
+        clip, duration = trim_mp3(data, stage)
+        # Na prévia real: 1,019 / 2,011 / 3,004 / 5,016 / 8,020 / 12,016 s.
+        assert stage <= duration < stage + FRAME_DURATION
+        assert not clip.startswith(b"ID3") and clip[:2] == b"\xff\xfb"
+        assert b"Xing" not in clip and b"Info" not in clip
+        assert mp3_duration(clip) == pytest.approx(duration)
+
+
+@pytest.mark.skipif(not os.environ.get("DEEZER_LIVE"),
+                    reason="consulta o Deezer real; rode com DEEZER_LIVE=1")
+def test_live_deezer_preview_is_trimmed() -> None:  # pragma: no cover - depende da rede
+    provider = DeezerProvider("https://api.deezer.com", 15, TTLCache(8, 60))
+    track = _track()
+    assert provider.check_availability(track) is True
+    clip = provider.get_clip(track, 3)
+    assert 3 <= clip.duration < 3.1
+    assert not clip.data.startswith(b"ID3") and b"Xing" not in clip.data[:200]
 
 
 def test_trim_mp3_rejects_garbage() -> None:
@@ -131,6 +173,72 @@ def test_deezer_resolves_and_trims_preview() -> None:
     assert b"ID3" not in clip.data
     provider.get_clip(track, 5)
     assert calls.count("/7.mp3") == 1  # prévia reaproveitada do cache entre estágios
+
+
+def _item(id_: int, title_short: str, artist: str, rank: int, version: str = "",
+          album: str = "Álbum") -> dict:
+    return {"id": id_, "title": f"{title_short} {version}".strip(), "title_short": title_short,
+            "title_version": version, "artist": {"name": artist}, "rank": rank,
+            "album": {"title": album}, "preview": f"https://cdn.test/{id_}.mp3"}
+
+
+def _search_provider(results: list[dict], queries: list[str] | None = None) -> DeezerProvider:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if queries is not None:
+            queries.append(request.url.params["q"])
+        return httpx.Response(200, json={"data": results})
+
+    return _deezer(handler)
+
+
+def test_deezer_prefers_studio_recording_over_live_and_covers() -> None:
+    # Ordem real da busca "Queen Bohemian Rhapsody" (14/10/2026), com versões ao vivo do
+    # próprio Queen e covers. Aqui a ao vivo vem antes e é mais popular que outras.
+    results = [
+        _item(1, "Bohemian Rhapsody", "Queen", 990_000, "(Live Aid)"),
+        _item(2, "Bohemian Rhapsody", "The Karaoke Channel", 999_999, "(Karaoke Version)"),
+        _item(3, "Bohemian Rhapsody", "Queen", 958_949, album="A Night At The Opera"),
+        _item(4, "Bohemian Rhapsody", "Queen", 100_000, album="Greatest Hits"),
+        _item(5, "Bohemian Rhapsody", "Queen", 999_000, album="Live at Wembley Stadium"),
+    ]
+    queries: list[str] = []
+    track = _track()
+    assert _search_provider(results, queries).check_availability(track) is True
+    assert track.external_id == "3"  # estúdio mais popular
+    assert queries == ["Queen Bohemian Rhapsody"]  # busca simples resolve na 1ª tentativa
+
+
+def test_deezer_accepts_live_version_when_catalog_asks_for_it() -> None:
+    results = [
+        _item(1, "Evidências", "Chitãozinho & Xororó", 900_000, "(Ao Vivo)"),
+        _item(2, "Evidências", "Chitãozinho & Xororó", 500_000),
+    ]
+    track = _track(title="Evidências", artist="Chitãozinho & Xororó",
+                   aliases=["Evidências - Ao Vivo"])
+    assert _search_provider(results).check_availability(track) is True
+    assert track.external_id == "1"
+
+
+def test_deezer_falls_back_to_advanced_search() -> None:
+    queries: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        queries.append(request.url.params["q"])
+        if request.url.params["q"].startswith("artist:"):
+            return httpx.Response(200, json={"data": [_item(8, "Bohemian Rhapsody", "Queen", 1)]})
+        return httpx.Response(200, json={"data": [_item(9, "Other Song", "Queen", 1)]})
+
+    track = _track()
+    assert _deezer(handler).check_availability(track) is True
+    assert track.external_id == "8"
+    assert queries == ["Queen Bohemian Rhapsody", 'artist:"Queen" track:"Bohemian Rhapsody"']
+
+
+def test_deezer_rejects_covers_by_other_artists() -> None:
+    results = [_item(1, "Bohemian Rhapsody", "Lucia Micarelli", 5),
+               _item(2, "Bohemian Rhapsody", "The Backing Track Collective", 5, "(Instrumental)")]
+    track = _track()
+    assert _search_provider(results).check_availability(track) is False
 
 
 def test_deezer_marks_missing_preview_unavailable() -> None:
