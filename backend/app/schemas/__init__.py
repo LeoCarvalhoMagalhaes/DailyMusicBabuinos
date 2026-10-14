@@ -1,0 +1,382 @@
+"""Contratos públicos da API (Pydantic).
+
+Nenhum schema de partida em andamento possui campos de título/artista da resposta:
+`GameState.answer` só é preenchido por `services.game.reveal_answer`, que exige
+partida encerrada.
+"""
+
+from __future__ import annotations
+
+from datetime import date, datetime
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+from app.core.categories import CATEGORY_SLUGS
+
+CategorySlug = Literal["rock", "pop", "rap", "country", "eletronica", "geral"]
+assert set(CategorySlug.__args__) == set(CATEGORY_SLUGS)  # type: ignore[attr-defined]
+
+GameStatus = Literal["in_progress", "won", "lost"]
+GameMode = Literal["daily", "endless", "match"]
+# Apelido: em classes com um campo chamado `date`, o nome do tipo fica encoberto.
+DateType = date
+
+
+class ErrorBody(BaseModel):
+    code: str
+    message: str
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorBody
+
+
+class Rules(BaseModel):
+    max_attempts: int
+    stages_seconds: list[float]
+    score_table: list[int]
+
+
+class CategoryOut(BaseModel):
+    slug: CategorySlug
+    name: str
+    description: str
+
+
+class CategoryDailyStatus(CategoryOut):
+    status: Literal["not_started", "in_progress", "won", "lost"]
+    attempts_used: int = 0
+    score: int = 0
+    game_id: str | None = None
+
+
+class AudioInfo(BaseModel):
+    provider: str
+    demo_mode: bool
+    attribution: str | None
+
+
+class DailyOverview(BaseModel):
+    date: date
+    timezone: str
+    challenge_number: int
+    server_time: datetime
+    next_reset_at: datetime
+    audio: AudioInfo
+    rules: Rules
+    categories: list[CategoryDailyStatus]
+
+
+class DailyChallengeOut(BaseModel):
+    category: CategoryOut
+    date: date
+    challenge_number: int
+    server_time: datetime
+    next_reset_at: datetime
+    audio: AudioInfo
+    rules: Rules
+
+
+class PlayerCreated(BaseModel):
+    player_id: str
+    token: str = Field(description="Guarde no dispositivo; enviado como 'Authorization: Bearer'.")
+
+
+class PlayerOut(BaseModel):
+    player_id: str
+    created_at: datetime
+
+
+class StartGameIn(BaseModel):
+    category: CategorySlug
+
+
+class GuessIn(BaseModel):
+    guess: str = Field(min_length=1, max_length=200)
+    attempt: int = Field(ge=1, le=50)
+
+
+class SkipIn(BaseModel):
+    attempt: int = Field(ge=1, le=50)
+
+
+class GuessOut(BaseModel):
+    attempt: int
+    text: str
+    skipped: bool
+    correct: bool
+
+
+class AnswerOut(BaseModel):
+    title: str
+    artist: str
+    cover_url: str | None
+    external_url: str | None
+    spotify_url: str | None = None
+    attribution: str | None
+
+
+class GameState(BaseModel):
+    id: str
+    mode: GameMode = "daily"
+    category: CategoryOut
+    # Só no desafio diário.
+    date: DateType | None = None
+    challenge_number: int | None = None
+    status: GameStatus
+    attempts_used: int
+    max_attempts: int
+    remaining_attempts: int
+    unlocked_stage: int
+    stages_seconds: list[float]
+    score: int
+    # Multiplayer: parte de `score` que veio do bônus de velocidade.
+    speed_bonus: int = 0
+    guesses: list[GuessOut]
+    answer: AnswerOut | None = None
+    next_reset_at: datetime
+
+
+class GuessResult(BaseModel):
+    correct: bool
+    game: GameState
+
+
+class SongSuggestion(BaseModel):
+    id: str
+    title: str
+    artist: str
+
+
+class StatsBlock(BaseModel):
+    category: str
+    games_played: int
+    wins: int
+    win_rate: float
+    total_score: int
+    average_score: float
+    current_streak: int
+    best_streak: int
+    last_played_date: date | None
+    distribution: list[int] = Field(
+        description="Vitórias por tentativa (1..N) seguidas do total de derrotas."
+    )
+
+
+class StatisticsOut(BaseModel):
+    overall: StatsBlock
+    categories: list[StatsBlock]
+
+
+class HistoryItem(BaseModel):
+    game_id: str
+    date: date
+    challenge_number: int
+    category: CategoryOut
+    status: GameStatus
+    attempts_used: int
+    score: int
+    answer: AnswerOut | None
+
+
+class HistoryOut(BaseModel):
+    items: list[HistoryItem]
+    total: int
+
+
+class HealthOut(BaseModel):
+    status: Literal["ok", "degraded"]
+    database: Literal["ok", "error"]
+    audio_provider: str
+    catalog_edition: str
+    version: str
+
+
+# ----------------------------------------------------------------- modo ilimitado
+
+class EndlessNextIn(BaseModel):
+    category: CategorySlug
+    # Sessão de jogo atual (placar da sessão). Vazio inicia uma nova.
+    run_id: str | None = Field(default=None, max_length=36)
+
+
+class RunSummaryOut(BaseModel):
+    run_id: str
+    rounds: int
+    wins: int
+    score: int
+    current_streak: int
+    best_streak: int
+
+
+class EndlessRound(BaseModel):
+    game: GameState
+    run: RunSummaryOut
+
+
+class EndlessStatsBlock(BaseModel):
+    category: str
+    rounds: int
+    wins: int
+    win_rate: float
+    total_score: int
+    average_score: float
+    current_streak: int
+    best_streak: int
+    distribution: list[int]
+
+
+class EndlessStatsOut(BaseModel):
+    overall: EndlessStatsBlock
+    categories: list[EndlessStatsBlock]
+
+
+# ------------------------------------------------------------------- multiplayer
+
+class RegisterIn(BaseModel):
+    username: str = Field(min_length=3, max_length=20)
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(min_length=2, max_length=40)
+
+
+class LoginIn(BaseModel):
+    username: str = Field(min_length=1, max_length=40)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class AccountOut(BaseModel):
+    id: str
+    username: str
+    display_name: str
+
+
+class AuthOut(BaseModel):
+    token: str = Field(description="Enviado como 'Authorization: Bearer' nas rotas /api/mp.")
+    account: AccountOut
+
+
+class CreateRoomIn(BaseModel):
+    category_order: list[CategorySlug] | None = None
+
+
+class JoinRoomIn(BaseModel):
+    code: str = Field(min_length=4, max_length=12)
+
+
+class ReadyIn(BaseModel):
+    ready: bool
+
+
+class OrderIn(BaseModel):
+    category_order: list[CategorySlug]
+
+
+class MatchGuessIn(BaseModel):
+    round: int = Field(ge=1, le=18)
+    attempt: int = Field(ge=1, le=50)
+    guess: str = Field(min_length=1, max_length=200)
+
+
+class MatchSkipIn(BaseModel):
+    round: int = Field(ge=1, le=18)
+    attempt: int = Field(ge=1, le=50)
+
+
+class RoomMemberOut(BaseModel):
+    account_id: str
+    display_name: str
+    is_host: bool
+    ready: bool
+    connected: bool
+    left: bool
+
+
+class PlayerProgressOut(BaseModel):
+    """Andamento público dos outros jogadores na rodada (nunca o texto dos palpites)."""
+
+    account_id: str
+    display_name: str
+    attempts_used: int
+    status: GameStatus
+    score: int
+
+
+class RoundOut(BaseModel):
+    number: int
+    category: CategoryOut
+    index_in_category: int
+    songs_per_category: int
+    started_at: datetime | None
+    ends_at: datetime | None
+
+
+class CategoryScoreOut(BaseModel):
+    category: CategorySlug
+    score: int
+    correct: int
+
+
+class ScoreLineOut(BaseModel):
+    position: int
+    account_id: str
+    display_name: str
+    total_score: int
+    correct: int
+    average_response_ms: int | None
+    per_category: list[CategoryScoreOut]
+    left: bool
+
+
+class RoundResultOut(BaseModel):
+    number: int
+    category: CategoryOut
+    answer: AnswerOut
+    my_status: GameStatus | None
+    my_score: int
+
+
+class MatchOut(BaseModel):
+    id: str
+    # playing | finished | abandoned
+    status: Literal["playing", "finished", "abandoned"]
+    # playing (palpites abertos) | reveal (resposta à mostra)
+    phase: Literal["playing", "reveal"]
+    current_round: int
+    total_rounds: int
+    phase_ends_at: datetime
+    round: RoundOut
+    my_game: GameState | None
+    progress: list[PlayerProgressOut]
+    # Só na fase de revelação ou com a partida encerrada.
+    answer: AnswerOut | None
+    scoreboard: list[ScoreLineOut]
+    history: list[RoundResultOut]
+    winner_ids: list[str]
+
+
+class RoomStateOut(BaseModel):
+    id: str
+    code: str
+    # waiting (sala de espera, inclusive entre partidas) | playing | closed
+    status: Literal["waiting", "playing", "closed"]
+    version: int
+    me: str
+    host_account_id: str
+    category_order: list[CategorySlug]
+    members: list[RoomMemberOut]
+    min_players: int
+    max_players: int
+    can_start: bool
+    start_blocker: str | None
+    round_seconds: float
+    reveal_seconds: float
+    speed_bonus_max: int
+    rules: Rules
+    server_time: datetime
+    match: MatchOut | None
+
+
+class MatchGuessResult(BaseModel):
+    correct: bool
+    state: RoomStateOut

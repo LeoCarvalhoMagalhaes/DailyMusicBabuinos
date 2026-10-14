@@ -1,0 +1,34 @@
+# Ambiente local completo com PostgreSQL: docker compose up --build
+# API em http://localhost:8000 ; rode o frontend com `npm run dev` em frontend/.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: babuinos
+      POSTGRES_PASSWORD: babuinos
+      POSTGRES_DB: babuinos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U babuinos"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql://babuinos:babuinos@db:5432/babuinos
+      AUDIO_PROVIDER: ${AUDIO_PROVIDER:-deezer}
+      CHALLENGE_SECRET: ${CHALLENGE_SECRET:-segredo-local-do-docker-compose-troque-me-123}
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

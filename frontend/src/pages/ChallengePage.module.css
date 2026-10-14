@@ -1,0 +1,147 @@
+.topbar {
+  margin: -6px 0 4px -12px;
+}
+
+.back {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.header {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.title {
+  font-size: clamp(26px, 6vw, 38px);
+}
+
+.date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.demo {
+  margin-bottom: 16px;
+}
+
+.layout {
+  display: grid;
+  gap: 18px;
+}
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: 28px;
+  }
+}
+
+.stage {
+  display: grid;
+  gap: 14px;
+}
+
+.mascotRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mascotRow svg {
+  flex: none;
+  width: 118px;
+  height: auto;
+}
+
+@media (min-width: 900px) {
+  .mascotRow svg {
+    width: 170px;
+  }
+}
+
+.bubble {
+  position: relative;
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--surface-2);
+  border-left: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.side {
+  display: grid;
+  gap: 16px;
+}
+
+.input {
+  padding-top: 4px;
+}
+
+.result {
+  margin-top: 24px;
+  display: grid;
+  gap: 24px;
+  scroll-margin-top: calc(var(--header-h) + 12px);
+}
+
+.more {
+  display: grid;
+  gap: 12px;
+}
+
+.moreTitle {
+  font-size: 20px;
+}
+
+.moreGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 900px) {
+  .moreGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .moreGrid {
+    grid-template-columns: 1fr;
+  }
+}

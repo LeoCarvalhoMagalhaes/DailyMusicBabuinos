@@ -1,0 +1,36 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec).
+# Cria a API (Docker) e um PostgreSQL gratuito. O frontend é publicado no GitHub Pages
+# (.github/workflows/pages.yml), por isso a API só aceita chamadas dessa origem.
+# Atenção: o PostgreSQL gratuito do Render expira 30 dias após a criação; para guardar as
+# estatísticas por mais tempo, use o Neon (ver docs/05-implantacao.md).
+databases:
+  - name: musicas-babuinas-db
+    plan: free
+    databaseName: babuinos
+    user: babuinos
+
+services:
+  - type: web
+    name: musicas-babuinas-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: musicas-babuinas-db
+          property: connectionString
+      # Gerado pelo Render (aleatório e forte). Nunca troque depois do lançamento.
+      - key: CHALLENGE_SECRET
+        generateValue: true
+      - key: AUDIO_PROVIDER
+        value: deezer
+      - key: CHALLENGE_TIMEZONE
+        value: America/Sao_Paulo
+      # Origem do GitHub Pages (sem o caminho /DailyMusicBabuinos/).
+      - key: CORS_ORIGINS
+        value: https://leocarvalhomagalhaes.github.io

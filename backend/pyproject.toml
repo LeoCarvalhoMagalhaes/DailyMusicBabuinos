@@ -1,0 +1,21 @@
+[project]
+name = "musicas-babuinas-backend"
+version = "1.0.0"
+description = "API do jogo diário de adivinhação musical Músicas Babuínas"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+  "error::DeprecationWarning:app.*",
+  "ignore:.*httpx2.*",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["B008"]

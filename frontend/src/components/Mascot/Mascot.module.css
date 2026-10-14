@@ -1,0 +1,188 @@
+.mascot {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 12px 24px rgb(0 0 0 / 0.45));
+}
+
+.head,
+.body,
+.arms {
+  transform-box: view-box;
+  transform-origin: 120px 160px;
+}
+
+.idle .head {
+  animation: breathe 3.2s ease-in-out infinite;
+}
+
+.listening .head {
+  animation: headbang 0.55s ease-in-out infinite alternate;
+}
+
+.listening .strum {
+  transform-box: view-box;
+  transform-origin: 100px 212px;
+  animation: strum 0.28s ease-in-out infinite alternate;
+}
+
+.doubt .head {
+  transform: rotate(-6deg);
+  transition: transform 0.3s var(--ease-out);
+}
+
+.nervous .head {
+  animation: shiver 0.18s linear infinite;
+}
+
+.win,
+.champion {
+  animation: jump 0.7s var(--ease-out) infinite alternate;
+}
+
+.lose .head {
+  animation: wobble 1.6s ease-in-out infinite;
+}
+
+.notes {
+  animation: float 1.4s ease-in-out infinite;
+}
+
+.question {
+  font-family: var(--font-display);
+  font-size: 44px;
+  animation: pop 0.4s var(--ease-out) both;
+}
+
+.sweat {
+  animation: drip 1.2s ease-in infinite;
+}
+
+.sparkles {
+  transform-box: view-box;
+  transform-origin: 120px 100px;
+  animation: twinkle 0.9s ease-in-out infinite alternate;
+}
+
+.dizzy {
+  transform-box: view-box;
+  transform-origin: 120px 40px;
+  animation: orbit 2.4s linear infinite;
+}
+
+.string {
+  stroke-width: 1.2;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+
+@keyframes headbang {
+  from {
+    transform: rotate(-4deg) translateY(0);
+  }
+  to {
+    transform: rotate(4deg) translateY(3px);
+  }
+}
+
+@keyframes strum {
+  from {
+    transform: rotate(-6deg);
+  }
+  to {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes shiver {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-1.2px);
+  }
+  75% {
+    transform: translateX(1.2px);
+  }
+}
+
+@keyframes jump {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes drip {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+
+@keyframes twinkle {
+  from {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
