@@ -234,6 +234,63 @@ def test_deezer_falls_back_to_advanced_search() -> None:
     assert queries == ["Queen Bohemian Rhapsody", 'artist:"Queen" track:"Bohemian Rhapsody"']
 
 
+def test_deezer_finds_collaboration_credited_to_the_other_artist() -> None:
+    # Real (14/10/2026): o Deezer credita "Something Just Like This" ao Coldplay; The
+    # Chainsmokers só aparece em `contributors` de /track/<id>.
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        if request.url.path == "/search":
+            return httpx.Response(200, json={"data": [
+                _item(5, "Something Just Like This", "Coldplay", 896_671),
+                _item(6, "Something Just Like This", "Coldplay", 422_389, "(Alesso Remix)"),
+            ]})
+        if request.url.path == "/track/5":
+            return httpx.Response(200, json={"id": 5, "contributors": [
+                {"name": "Coldplay", "role": "Main"}, {"name": "The Chainsmokers", "role": "Main"},
+            ]})
+        return httpx.Response(404)
+
+    track = _track(title="Something Just Like This", artist="The Chainsmokers")
+    assert _deezer(handler).check_availability(track) is True
+    assert track.external_id == "5"
+    assert "/track/6" not in calls  # só consulta o candidato de estúdio mais popular
+
+
+def test_deezer_looks_for_studio_version_in_artist_top_tracks() -> None:
+    # Real (14/10/2026): a busca "Oasis Wonderwall" só devolve versões ao vivo do Oasis.
+    def live(id_: int, rank: int) -> dict:
+        item = _item(id_, "Wonderwall", "Oasis", rank, "(Live at Knebworth, 10 August '96)")
+        item["artist"]["id"] = 927
+        return item
+
+    paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        if request.url.path == "/search":
+            return httpx.Response(200, json={"data": [live(1, 470_004), live(2, 421_237)]})
+        if request.url.path == "/artist/927/top":
+            return httpx.Response(200, json={"data": [
+                _item(3, "Wonderwall", "Oasis", 846_066, "(Remastered)",
+                      album="(What's The Story) Morning Glory? (Remastered)"),
+                live(1, 470_004),
+            ]})
+        return httpx.Response(404)
+
+    track = _track(title="Wonderwall", artist="Oasis", aliases=["Wonderwall - Remastered"])
+    assert _deezer(handler).check_availability(track) is True
+    assert track.external_id == "3"
+    assert paths == ["/search", "/search", "/artist/927/top"]
+
+
+def test_deezer_artist_names_ignore_spaces() -> None:
+    results = [_item(1, "Seven (feat. Latto)", "Jungkook", 771_507)]
+    track = _track(title="Seven", artist="Jung Kook")
+    assert _search_provider(results).check_availability(track) is True
+
+
 def test_deezer_rejects_covers_by_other_artists() -> None:
     results = [_item(1, "Bohemian Rhapsody", "Lucia Micarelli", 5),
                _item(2, "Bohemian Rhapsody", "The Backing Track Collective", 5, "(Instrumental)")]

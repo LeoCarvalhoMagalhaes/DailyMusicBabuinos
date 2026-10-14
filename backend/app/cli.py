@@ -47,14 +47,17 @@ from app.services.daily import get_challenge, get_or_create_challenge
 
 def check_audio(db: Session, provider: AudioProvider, edition: str, limit: int,
                 delay: float = 0.25, log: Callable[[str], None] = print,
-                sleep: Callable[[float], None] = time.sleep) -> int:
-    """Verifica no provedor as faixas ainda não verificadas que estão em alguma lista
-    ativa. Uma falha temporária (rede/cota) espera e tenta de novo uma vez; se repetir,
-    para sem marcar a faixa como indisponível. Devolve quantas foram verificadas."""
+                sleep: Callable[[float], None] = time.sleep, recheck: bool = False) -> int:
+    """Verifica no provedor as faixas ainda não verificadas (e, com `recheck`, também as
+    marcadas como indisponíveis) que estão em alguma lista ativa. Uma falha temporária
+    (rede/cota) espera e tenta de novo uma vez; se repetir, para sem marcar a faixa como
+    indisponível. Devolve quantas foram verificadas."""
     active = select(CatalogEntry.track_id).where(CatalogEntry.active.is_(True))
     tracks = db.scalars(
         select(MusicTrack)
-        .where(MusicTrack.edition == edition, MusicTrack.availability == "unknown",
+        .where(MusicTrack.edition == edition,
+               MusicTrack.availability.in_(["unknown", "unavailable"] if recheck
+                                           else ["unknown"]),
                MusicTrack.id.in_(active))
         .order_by(MusicTrack.id)
         .limit(limit)
@@ -111,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("--limit", type=int, default=50)
     check.add_argument("--delay", type=float, default=0.25,
                        help="Segundos entre faixas (respeita a cota do Deezer)")
+    check.add_argument("--recheck", action="store_true",
+                       help="Verifica de novo as faixas marcadas como sem prévia")
     reveal = sub.add_parser("reveal")
     reveal.add_argument("--category", choices=CATEGORY_SLUGS, required=True)
     reveal.add_argument("--json", action="store_true")
@@ -162,7 +167,8 @@ def main(argv: list[str] | None = None) -> int:
                                              clock.now())
                 print(f"{category}: desafio #{ch.id} publicado para {ch.challenge_date}")
         elif args.command == "check-audio":
-            check_audio(db, provider, settings.catalog_edition, args.limit, args.delay)
+            check_audio(db, provider, settings.catalog_edition, args.limit, args.delay,
+                        recheck=args.recheck)
             print_audio_summary(db, settings.catalog_edition)
         elif args.command == "reveal":
             ch = get_challenge(db, args.category, clock.today(), settings.catalog_edition)

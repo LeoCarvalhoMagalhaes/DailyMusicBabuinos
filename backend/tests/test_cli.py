@@ -40,3 +40,17 @@ def test_check_audio_stops_on_repeated_failure_without_condemning_tracks(
     assert sleeps == [5]  # tentou de novo uma vez antes de parar
     assert len(logs) == 1 and logs[0].startswith("ERRO")
     assert all(counts["unavailable"] == 0 for counts in summary.values())
+
+
+def test_check_audio_recheck_revisits_unavailable_tracks(main_harness: Harness,
+                                                         fake_provider: FakeProvider) -> None:
+    edition = main_harness.settings.catalog_edition
+    fake_provider.unavailable.add("queen--bohemian-rhapsody")
+    with main_harness.app.state.session_factory() as db:
+        check_audio(db, fake_provider, edition, 10_000, log=lambda _: None, sleep=lambda _: None)
+        fake_provider.unavailable.clear()  # ex.: a busca melhorou
+        assert check_audio(db, fake_provider, edition, 10_000, log=lambda _: None,
+                           sleep=lambda _: None) == 0
+        assert check_audio(db, fake_provider, edition, 10_000, log=lambda _: None,
+                           sleep=lambda _: None, recheck=True) > 0
+        assert audio_summary(db, edition)["rock"]["available"] == 100
