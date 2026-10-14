@@ -1,10 +1,7 @@
 import { execFileSync } from 'node:child_process'
-import path from 'node:path'
 import { expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
-
-const backendDir = path.resolve(import.meta.dirname, '../../backend')
-const python = process.env.E2E_PYTHON ?? path.join(backendDir, '.venv/bin/python')
+import { E2E_DATABASE_URL, backendDir, python } from './paths'
 
 /** Lê a resposta do dia direto no banco, pela CLI do servidor (não existe rota HTTP para isso). */
 export function revealAnswer(category: string): { title: string; artist: string } {
@@ -13,8 +10,10 @@ export function revealAnswer(category: string): { title: string; artist: string 
     // Mesmo banco e mesmo provedor do servidor dos testes (modo demo).
     env: {
       ...process.env,
-      DATABASE_URL: `sqlite:///${path.join(backendDir, 'e2e.db')}`,
+      DATABASE_URL: E2E_DATABASE_URL,
       AUDIO_PROVIDER: 'demo',
+      // No Windows a saída do Python num pipe usaria a página de código local (cp1252).
+      PYTHONUTF8: '1',
     },
   })
   return JSON.parse(output.toString())
