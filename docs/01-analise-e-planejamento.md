@@ -11,8 +11,9 @@ leitura de páginas também não resolve esses domínios). Por isso:
 - a análise do Bandle abaixo vem de **fontes públicas secundárias** (listagem na App Store,
   Google Play e guias especializados), não da navegação direta no site;
 - a integração com o Deezer foi implementada contra o formato documentado da API e testada
-  com respostas simuladas. Ela **ainda não foi exercitada contra o serviço real**, e isso
-  precisa ser feito no primeiro deploy (veja [05-implantacao.md](05-implantacao.md)).
+  com respostas simuladas. Em 14/10/2026 ela foi validada contra o serviço real, numa
+  máquina com internet (veja [03-audio-e-catalogo.md](03-audio-e-catalogo.md) e
+  [05-implantacao.md](05-implantacao.md)).
 
 Fontes consultadas: [Bandle na App Store](https://apps.apple.com/us/app/bandle-guess-the-song-quiz/id6471419531),
 [Bandle no Google Play](https://play.google.com/store/apps/details?id=com.bandlegame.bandleguessasong),
@@ -106,8 +107,9 @@ O navegador nunca recebe a URL da prévia nem o arquivo completo durante a parti
 Não existe uma fonte única, gratuita e redistribuível de "Top 100" confiável para os seis
 gêneros com sobreposição adequada ao público brasileiro. Por isso:
 
-- O catálogo inicial é uma **curadoria editorial documentada** de 100 faixas por categoria
-  (545 faixas únicas; a categoria Geral compartilha 55 faixas com as demais).
+- O catálogo inicial era uma **curadoria editorial documentada** de 100 faixas por
+  categoria. Desde 14/10/2026 as listas vêm dos streams do Spotify publicados pelo kworb
+  (520 faixas únicas; a Geral compartilha 77 com os gêneros).
 - **Nenhuma posição de ranking foi inventada:** faixas de fontes `editorial` têm `rank` nulo.
   O carregador **rejeita** posição numérica que não venha de uma fonte do tipo `chart`.
 - Cada arquivo registra fonte, tipo, data de consulta e metodologia.

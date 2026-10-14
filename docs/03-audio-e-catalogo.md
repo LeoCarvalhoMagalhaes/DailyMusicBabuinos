@@ -38,9 +38,17 @@ Trocar de provedor não muda nenhuma regra do jogo.
 - URLs de prévia são assinadas e expiram. Por isso guardamos o `id` da faixa e pedimos a URL
   de novo quando necessário.
 - Nem toda faixa tem prévia em todas as regiões. O sorteio verifica e pula as indisponíveis.
-- **Não foi possível testar contra o Deezer real neste ambiente** (acesso bloqueado). O
-  provedor foi testado com respostas simuladas fiéis ao formato da API. Valide no primeiro
-  deploy com `python -m app.cli check-audio --limit 20`.
+- **Verificado contra a API real em 14/10/2026:**
+  - `/search` e `/track/<id>` trazem os campos usados (`preview`, `title_short`,
+    `title_version`, `artist.name`, `album.cover_big`, `link`, `rank`); `/track/<id>` traz
+    também `readable` e `contributors`.
+  - A prévia é um MP3 de 29,99 s (MPEG-1 Layer III, 128 kbps, 44,1 kHz, joint stereo), com
+    uma tag ID3v2.4 vazia de 10 bytes e sem quadro Xing/Info. Cortada em 1, 2, 3, 5, 8 e
+    12 s, rende 1,019 / 2,011 / 3,004 / 5,016 / 8,020 / 12,016 s, sem ID3 nem Xing, e toca no
+    Chromium (Web Audio e `<audio>` informam a duração do trecho, não a do original).
+  - O teste `test_trim_real_deezer_layout` reproduz esse layout com um MP3 gerado (nenhum
+    áudio de terceiros no repositório); `DEEZER_LIVE=1 pytest -k live_deezer` repete a
+    checagem contra o Deezer real.
 
 ### Por que o áudio não vem do Spotify
 
@@ -59,6 +67,48 @@ As músicas do jogo são escolhidas pelos dados do Spotify (veja "Catálogo prin
 Por isso o jogo toca **a gravação original, por partes**, a partir da prévia oficial do
 Deezer da mesma música (busca por título e artista), e usa o Spotify apenas como fonte da
 lista e como link "Ouvir no Spotify" no fim da partida.
+
+### Como a gravação certa é escolhida no Deezer
+
+Regras ajustadas com o catálogo real (14/10/2026), todas cobertas por testes em
+`tests/test_audio.py`:
+
+1. Busca simples (`artista título`) primeiro. O filtro avançado `artist:"..."` da API não
+   funcionava nessa data (com `track:` voltava vazio); ele fica como segunda tentativa.
+2. O título precisa bater (com ou sem o trecho entre parênteses e aliases) e o artista
+   também; covers e karaokê de outros artistas nunca entram. Nomes são comparados sem
+   espaços ("Jung Kook" = "Jungkook").
+3. Entre as versões do próprio artista, vence a de estúdio mais popular (`rank`). Ao vivo,
+   remix, karaokê, instrumental, acústica, re-edit etc. só valem se o próprio catálogo pedir
+   (ex.: "Evidências - Ao Vivo"); "Live", "Ao Vivo" e "En Vivo" contam como a mesma marca.
+4. Parcerias creditadas a outro artista no Deezer (ex.: "Something Just Like This" sai como
+   Coldplay) são confirmadas pelos `contributors` de `/track/<id>`.
+5. Se a busca só traz versões ao vivo do artista (ex.: "Oasis Wonderwall"), a de estúdio é
+   procurada nas mais tocadas dele (`/artist/<id>/top`).
+
+### Resultado da verificação do catálogo (14/10/2026)
+
+`python -m app.cli check-audio --limit 600` num banco novo:
+
+| Categoria | Com prévia | Sem prévia |
+| --- | --- | --- |
+| Rock | 100 | 0 |
+| Pop | 100 | 0 |
+| Rap | 100 | 0 |
+| Country | 100 | 0 |
+| Eletrônica | 99 | 1 |
+| Geral | 100 | 0 |
+
+- 519 das 520 faixas únicas têm prévia. A que falta, "Hypnotized" (Purple Disco Machine),
+  não aparece na busca do Deezer; o sorteio a pula.
+- Auditoria de todas as 519 escolhas (título, álbum e `contributors` em `/track/<id>`):
+  nenhuma versão ao vivo, remix ou cover indevida depois dos ajustes acima. As versões ao
+  vivo que sobram são as que o próprio Spotify lista como a gravação mais ouvida (sertanejo
+  "Ao Vivo").
+- Antes dos ajustes, a primeira verificação teve 5 faixas sem prévia (parcerias e
+  "Jung Kook") e a amostragem achou "Wonderwall" e "Friday" em versões erradas.
+- Depois de mudar a busca, rode `python -m app.cli check-audio --recheck` para rever as
+  faixas marcadas como sem prévia.
 
 ### Outras fontes avaliadas
 - **iTunes Search API (Apple):** oferece prévias, mas a documentação não pôde ser consultada
@@ -128,18 +178,44 @@ Como as listas são montadas:
   `.kworb-cache/` e User-Agent identificado. O kworb não tem API nem termos específicos para
   esse uso: rode o importador raramente (por exemplo, uma vez por mês) e mantenha o crédito
   ao site.
-- Limitação: **o importador não pôde ser executado contra o kworb real neste ambiente**
-  (acesso bloqueado). Ele foi testado com páginas simuladas no formato das tabelas do kworb;
-  se o site mudar o layout, o importador para com uma mensagem clara em vez de gravar dados
-  errados.
+- Formato conferido nas páginas reais em 14/10/2026: `songs.html` traz só o texto
+  "Artista - Título", **sem link da faixa** (o id do Spotify da Geral é completado com as
+  páginas de artista já baixadas; sem id, o link pós-jogo vira uma busca no Spotify);
+  `artists.html` (top 3000) e `artist/<id>_songs.html` têm os links, com "* " antes das
+  participações e uma tabela-resumo antes da lista. Os testes usam trechos reais e curtos
+  dessas páginas. Se o layout mudar, o importador para com uma mensagem clara.
+- `"excluir"` no arquivo de seeds lista artistas que nunca entram (ex.: ruído branco que
+  aparece entre as mais tocadas da lista global).
+- Títulos: qualquer sufixo " - ..." do Spotify ("- Remastered 2011", "- PNAU Remix",
+  "- Spider-Man: Into the Spider-Verse") e parênteses de remix/edit/live/version/"from ..."
+  saem do título exibido; o original continua aceito como resposta.
 
-### Curadoria editorial (catálogo inicial)
+### Importação de 14/10/2026
 
-Enquanto o importador não é executado, vale o catálogo editorial abaixo.
+- `python -m app.cli import-kworb --delay 2`: 399 páginas, uma por vez, com cache em
+  `.kworb-cache/` (dados do kworb atualizados em 13/10/2026). As reimportações seguintes,
+  para revisar a limpeza de títulos, usaram só o cache.
+- 6 × 100 faixas, todas com fonte `chart`, posição, data e streams; 520 faixas únicas (a
+  Geral compartilha 77 com os gêneros). Na Geral, 77 das 100 faixas têm o id do Spotify; as
+  outras 23 usam o link de busca.
+- Ajustes nos seeds: saíram os artistas fora do top 3000 do kworb (sem id confirmado, nada
+  foi fixado de memória), nomes corrigidos ("Ms. Lauryn Hill", "Jimi Hendrix", "Warren G";
+  "Leandro & Leonardo" era resolvido como "Leonardo" e virou "Leonardo", que é o sertanejo
+  certo), saíram artistas cujas músicas mais tocadas são de outro gênero (Taylor Swift,
+  Beyoncé e Post Malone no Country; Doja Cat no Rap; Donna Summer na Eletrônica) e entraram
+  artistas do gênero presentes no kworb (sertanejo, rap nacional, country e EDM atuais).
+- Revisão das listas: corrigidos títulos com sufixo de versão e duplicatas ("World Hold On",
+  "Love Tonight", "Don’t Start Now" com apóstrofo curvo); "Clean Baby Sleep White Noise"
+  saiu da Geral pelo `excluir` (a posição 73 fica vaga: as posições são as do kworb).
+- Nenhuma posição foi editada à mão.
+
+### Curadoria editorial (catálogo anterior)
+
+Antes da importação de 14/10/2026, os arquivos traziam uma curadoria editorial (545 faixas
+únicas). Ela continua no histórico do Git (commit `a64a991`) e serve de modelo para quem
+quiser montar uma lista sem o kworb.
 
 - Arquivos: `backend/app/data/catalog/{rock,pop,rap,country,eletronica,geral}.json`.
-- 100 faixas por categoria, 545 faixas únicas (a categoria Geral compartilha 55 faixas com as
-  demais, como pede o enunciado).
 - **Metodologia:** curadoria editorial (não é ranking oficial). Critérios registrados em cada
   arquivo: faixas amplamente reconhecíveis, presença recorrente em paradas, listas editoriais
   e catálogos de streaming, diversidade de décadas e subgêneros, no máximo 3 faixas por artista

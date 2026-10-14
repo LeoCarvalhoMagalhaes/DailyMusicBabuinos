@@ -74,7 +74,7 @@ Nenhuma credencial real é versionada. O Deezer não exige chave de API.
    ```
 6. Valide o Deezer no ambiente publicado (Render → API → **Shell**):
    ```bash
-   python -m app.cli check-audio --limit 20   # deve listar "OK" para a maioria
+   python -m app.cli check-audio --limit 600  # resumo por categoria no fim
    python -m app.cli publish-today            # publica os 6 desafios do dia
    ```
 7. Abra o site, jogue uma categoria no celular e no computador, e compartilhe um resultado.
@@ -122,14 +122,34 @@ docker run -p 8000:8000 \
 - Novas migrações: `cd backend && alembic revision --autogenerate -m "descrição"`, revise o
   arquivo gerado e faça o deploy (a API aplica na inicialização).
 
-## O que não pôde ser verificado neste ambiente
+## O que foi verificado (14/10/2026, Windows 11 com internet)
 
-- **Deploy real** (Render/Neon/Cloudflare): depende das suas contas. A configuração foi
-  escrita conforme a documentação dos serviços, mas não foi executada.
-- **Build da imagem Docker:** o ambiente de desenvolvimento não tem o daemon do Docker. O
-  comando de inicialização da imagem foi validado executando o mesmo `uvicorn` com as mesmas
-  opções contra PostgreSQL 16 em modo produção.
-- **Deezer real:** o acesso à API do Deezer é bloqueado neste ambiente; o provedor foi testado
-  com respostas simuladas. O passo 6 acima é a validação definitiva.
-- **GitHub Actions:** o workflow `.github/workflows/ci.yml` foi escrito para rodar os mesmos
-  comandos executados localmente, mas ainda não rodou no GitHub.
+- **kworb real:** formato das páginas conferido e catálogo de 6 × 100 importado (detalhes em
+  [03-audio-e-catalogo.md](03-audio-e-catalogo.md#importação-de-14102026)).
+- **Deezer real:** 599 das 600 entradas (519 das 520 faixas únicas) com prévia; corte do MP3
+  conferido numa prévia real; auditoria das 519 gravações escolhidas.
+- **Partida real em cada categoria** (Chromium desktop e Pixel 7, com API e Vite locais):
+  áudio da gravação original tocando por partes (1,019 / 2,011 / 3,004 / ... / 12,016 s),
+  trecho seguinte liberado após pular ou errar, 403 ao pedir trecho ainda bloqueado, capa,
+  "Ouvir no Spotify" e link do Deezer no acerto, compartilhamento sem a música, partida
+  mantida após recarregar, estatísticas atualizadas, sem rolagem horizontal e sem erros no
+  console.
+- **PostgreSQL 16.15** (binários oficiais portáteis, sem Docker): a suíte do backend passa com
+  `TEST_DATABASE_URL`, e a API em `APP_ENV=production` (mesmo comando `uvicorn` da imagem)
+  aplicou as migrações, respondeu `/api/health` com `database: ok`, escondeu `/api/docs` e
+  serviu uma partida real pelo frontend.
+- **E2E no Windows:** a configuração do Playwright passou a funcionar em Windows, Linux e
+  macOS. Há um projeto opcional `iphone` (WebKit) com `E2E_WEBKIT=1`.
+
+## O que ainda depende de você
+
+- **Deploy real** (Render/Neon/Cloudflare): depende das suas contas.
+- **Build da imagem Docker / `docker compose up --build`:** a máquina usada não tem Docker.
+  O comando da imagem foi exercitado diretamente contra PostgreSQL (acima), mas o
+  `docker build` em si não rodou.
+- **Safari/iOS de verdade:** o WebKit do Playwright no Windows não toca MP3 (nem a prévia
+  original do Deezer, sem corte), então o áudio real só foi tocado no Chromium. No WebKit
+  passam os fluxos do modo demonstração (WAV). O player libera o áudio no próprio toque,
+  como o iOS exige; confira num iPhone o play logo após o toque e o volume (no iOS o
+  controle de volume some, porque o sistema ignora `audio.volume`).
+- **GitHub Actions:** o workflow `.github/workflows/ci.yml` ainda não rodou no GitHub.

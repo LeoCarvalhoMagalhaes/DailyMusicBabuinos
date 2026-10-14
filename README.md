@@ -78,7 +78,7 @@ de API. Sem internet, use `AUDIO_PROVIDER=demo` no `backend/.env` (melodias sint
 kworb (uma vez, ~10 min):
 
 ```bash
-cd backend && python -m app.cli import-kworb && python -m app.cli check-audio --limit 100
+cd backend && python -m app.cli import-kworb && python -m app.cli check-audio --limit 600
 ```
 
 ### Ferramentas de operação
@@ -96,13 +96,14 @@ python -m app.cli purge-inactive --days 400  # retenção de dados
 ## Testes
 
 ```bash
-cd backend && pytest                                   # 124 testes (SQLite)
+cd backend && pytest                                   # 153 testes (SQLite; 1 só com DEEZER_LIVE=1)
 TEST_DATABASE_URL=postgresql://user:senha@localhost:5432/babuinos_test pytest   # mesmos testes no PostgreSQL
 
 cd frontend
-npm run typecheck && npm test                          # 28 testes Vitest
+npm run typecheck && npm test                          # 31 testes Vitest
 npx playwright install chromium                        # uma vez
 npm run e2e                                            # 12 testes E2E (desktop + celular)
+E2E_WEBKIT=1 npm run e2e                               # + 6 no WebKit (iPhone); antes: npx playwright install webkit
 ```
 
 Os testes E2E sobem o backend real em modo demonstração (banco descartável) e o frontend,
@@ -121,8 +122,8 @@ jogam partidas completas e verificam que não há rolagem horizontal no celular.
 ## Sobre o áudio e o catálogo (importante)
 
 - **Lista de músicas:** as mais ouvidas no Spotify, segundo os dados públicos do kworb.net
-  (`python -m app.cli import-kworb`), com posição, fonte e data registradas. Até rodar o
-  importador, vale uma curadoria editorial documentada (sem posições inventadas).
+  (`python -m app.cli import-kworb`), com posição, fonte e data registradas. A lista atual
+  foi importada em 14/10/2026: 6 × 100 faixas, 519 das 520 com prévia no Deezer.
 - **Áudio:** trechos da gravação original, por partes, vindos das prévias oficiais do Deezer.
   O Spotify não é usado como fonte de áudio porque a política para desenvolvedores dele
   proíbe jogos e quizzes.

@@ -57,8 +57,8 @@ API with PostgreSQL.
 ## Tests
 
 ```bash
-cd backend && pytest                       # 124 tests (also run on PostgreSQL via TEST_DATABASE_URL)
-cd frontend && npm run typecheck && npm test && npm run e2e   # 28 unit + 12 E2E (desktop & mobile)
+cd backend && pytest                       # 153 tests (also run on PostgreSQL via TEST_DATABASE_URL)
+cd frontend && npm run typecheck && npm test && npm run e2e   # 31 unit + 12 E2E (desktop & mobile)
 ```
 
 ## Documentation (Portuguese)
@@ -69,7 +69,8 @@ deployment guides live in [`docs/`](docs).
 ## Audio and catalog notes
 
 - **Song list:** the most-streamed songs on Spotify, from kworb.net public data, with rank,
-  source and date recorded (an editorial selection is used until the importer is run).
+  source and date recorded (imported on 2026-10-14: 6 × 100 songs, 519 of 520 with a Deezer
+  preview).
 - **Audio:** growing excerpts of the original recording from Deezer's official previews.
   Spotify is not used as an audio source because its Developer Policy forbids games and
   quizzes.
