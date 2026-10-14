@@ -1,4 +1,4 @@
-import { Check, Clock, Copy, ExternalLink, Share2 } from 'lucide-react'
+import { Check, Clock, Copy, Share2 } from 'lucide-react'
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useCountdown } from '../../hooks/useCountdown'
@@ -6,6 +6,7 @@ import type { GameState } from '../../types/api'
 import { CATEGORY_THEMES } from '../../utils/categories'
 import { formatCountdown } from '../../utils/format'
 import { resultGrid, shareResult, shareText, siteUrl } from '../../utils/share'
+import { AnswerCard } from './AnswerCard'
 import styles from './ResultPanel.module.css'
 
 interface ResultPanelProps {
@@ -20,7 +21,6 @@ export function ResultPanel({ game, serverTime, onNewDay }: ResultPanelProps) {
   const answer = game.answer
   const remaining = useCountdown(game.next_reset_at, serverTime, onNewDay)
   const [shareState, setShareState] = useState<'idle' | 'copied' | 'shared' | 'failed'>('idle')
-  const [coverFailed, setCoverFailed] = useState(false)
 
   const share = async () => {
     const outcome = await shareResult(shareText(game, siteUrl()))
@@ -44,46 +44,7 @@ export function ResultPanel({ game, serverTime, onNewDay }: ResultPanelProps) {
           : 'A música era…'}
       </h2>
 
-      {answer && (
-        <div className={styles.answer}>
-          <div className={styles.cover} aria-hidden={!answer.cover_url || coverFailed}>
-            {answer.cover_url && !coverFailed ? (
-              <img
-                src={answer.cover_url}
-                alt={`Capa de ${answer.title}`}
-                width={120}
-                height={120}
-                loading="lazy"
-                onError={() => setCoverFailed(true)}
-              />
-            ) : (
-              <div className={styles.vinyl}>
-                <span>{theme.emoji}</span>
-              </div>
-            )}
-          </div>
-          <div className={styles.answerText}>
-            <p className={styles.songTitle}>{answer.title}</p>
-            <p className={styles.artist}>{answer.artist}</p>
-            {(answer.spotify_url || answer.external_url) && (
-              <p className={styles.links}>
-                {answer.spotify_url && (
-                  <a href={answer.spotify_url} target="_blank" rel="noreferrer noopener" className={styles.spotify}>
-                    Ouvir no Spotify <ExternalLink size={14} aria-hidden />
-                  </a>
-                )}
-                {answer.external_url && (
-                  <a href={answer.external_url} target="_blank" rel="noreferrer noopener" className={styles.link}>
-                    {answer.spotify_url ? 'Abrir no Deezer' : 'Ouvir a música completa'}{' '}
-                    <ExternalLink size={14} aria-hidden />
-                  </a>
-                )}
-              </p>
-            )}
-            {answer.attribution && <p className={styles.attribution}>{answer.attribution}</p>}
-          </div>
-        </div>
-      )}
+      {answer && <AnswerCard answer={answer} emoji={theme.emoji} />}
 
       <dl className={styles.numbers}>
         <div>

@@ -180,3 +180,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+.modesSection {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+}

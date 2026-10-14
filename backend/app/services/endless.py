@@ -95,17 +95,21 @@ def _valid_run(db: Session, player_id: str, run_id: str | None) -> str:
     return str(uuid.uuid4())
 
 
+def _open_rounds(db: Session, player_id: str, category: str) -> list[GameSession]:
+    return list(db.scalars(
+        select(GameSession)
+        .where(GameSession.player_id == player_id, GameSession.mode == MODE_ENDLESS,
+               GameSession.category == category, GameSession.status == "in_progress")
+        .order_by(GameSession.started_at, GameSession.id)
+    ))
+
+
 def next_round(db: Session, settings: Settings, provider: AudioProvider, player: Player,
                category: str, run_id: str | None, today: date, now: datetime
                ) -> GameSession:
-    current = db.scalar(
-        select(GameSession).where(GameSession.player_id == player.id,
-                                  GameSession.mode == MODE_ENDLESS,
-                                  GameSession.category == category,
-                                  GameSession.status == "in_progress")
-    )
-    if current is not None:
-        return current
+    current = _open_rounds(db, player.id, category)
+    if current:
+        return current[0]
     run = _valid_run(db, player.id, run_id)
     avoid = todays_daily_track_ids(db, settings, provider, today, now)
     pool_size = len(candidates(db, category, settings.catalog_edition))
@@ -115,7 +119,14 @@ def next_round(db: Session, settings: Settings, provider: AudioProvider, player:
     game = new_session(player.id, track.id, category, MODE_ENDLESS, now, run_id=run)
     db.add(game)
     db.commit()
-    return game
+    # Duas requisições simultâneas (duplo clique, duas abas) podem criar duas rodadas.
+    # Fica só a mais antiga; a escolha é determinística, então as duas concordam.
+    open_rounds = _open_rounds(db, player.id, category)
+    for extra in open_rounds[1:]:
+        if extra.attempts_used == 0:
+            db.delete(extra)
+    db.commit()
+    return open_rounds[0]
 
 
 @dataclass

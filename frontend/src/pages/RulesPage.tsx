@@ -1,4 +1,4 @@
-import { Headphones, Keyboard, Send, Share2, SkipForward, Trophy } from 'lucide-react'
+import { Headphones, Infinity as InfinityIcon, Keyboard, Send, Share2, SkipForward, Trophy, Users } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link } from 'react-router'
 import { Mascot } from '../components/Mascot/Mascot'
@@ -133,6 +133,39 @@ export function RulesPage() {
           categoria pode ser jogada uma vez por dia; recarregar a página não troca a música nem
           reinicia a partida. Jogue pelo menos uma categoria por dia para manter sua sequência de
           dias.
+        </p>
+      </section>
+
+      <section className={styles.section} aria-labelledby="ilimitado">
+        <h2 id="ilimitado" className={styles.sectionTitle}>
+          <InfinityIcon aria-hidden size={20} /> Modo Ilimitado
+        </h2>
+        <p>
+          Rodadas solo sem fim, com as mesmas regras e a mesma pontuação do desafio diário. Escolha a
+          categoria e, ao terminar cada rodada, toque em <strong>Próxima música</strong>. O placar da
+          sessão mostra pontos, acertos e a sequência de acertos seguidos. As músicas não se repetem
+          tão cedo, a música do desafio diário de hoje nunca aparece e nada aqui muda o seu desafio
+          diário ou as estatísticas dele.
+        </p>
+      </section>
+
+      <section className={styles.section} aria-labelledby="multiplayer">
+        <h2 id="multiplayer" className={styles.sectionTitle}>
+          <Users aria-hidden size={20} /> Multiplayer
+        </h2>
+        <p>
+          Crie uma conta, abra uma sala e passe o código para até 7 amigos (2 a 8 jogadores). A
+          partida tem <strong>18 músicas: 3 de cada categoria</strong>, na ordem escolhida pelo
+          anfitrião. Todos ouvem a mesma música ao mesmo tempo, cada um com as suas {max} tentativas e
+          trechos. Cada rodada dura até 60 segundos ou até todos terminarem; depois a resposta aparece
+          para todos ao mesmo tempo.
+        </p>
+        <p>
+          <strong>Pontos:</strong> os da tabela acima (pelo número de tentativas) mais um{' '}
+          <strong>bônus de velocidade</strong> de até 50 pontos, proporcional ao tempo que ainda
+          restava na rodada quando você acertou. Erro ou tempo esgotado valem 0. O desempate é por
+          número de acertos e, depois, pelo menor tempo médio de resposta. Se cair a conexão, é só
+          voltar à sala: você continua de onde parou.
         </p>
         <p>
           <Link to="/" className="btn btn-primary">

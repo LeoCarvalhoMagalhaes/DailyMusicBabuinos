@@ -3,6 +3,19 @@ import { expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { E2E_DATABASE_URL, backendDir, python } from './paths'
 
+/** Resposta da rodada atual de uma sala multiplayer (CLI do servidor). */
+export function revealRoom(code: string): { title: string; round: number } {
+  return cli(['reveal', '--room', code, '--json']) as { title: string; round: number }
+}
+
+function cli(args: string[]): unknown {
+  const output = execFileSync(python, ['-m', 'app.cli', ...args], {
+    cwd: backendDir,
+    env: { ...process.env, DATABASE_URL: E2E_DATABASE_URL, AUDIO_PROVIDER: 'demo', PYTHONUTF8: '1' },
+  })
+  return JSON.parse(output.toString())
+}
+
 /** Lê a resposta do dia direto no banco, pela CLI do servidor (não existe rota HTTP para isso). */
 export function revealAnswer(category: string): { title: string; artist: string } {
   const output = execFileSync(python, ['-m', 'app.cli', 'reveal', '--category', category, '--json'], {

@@ -46,4 +46,6 @@ export const STORAGE_KEYS = {
   stats: 'mb.stats-cache',
   volume: 'mb.volume',
   seenRules: 'mb.seen-rules',
+  accountToken: 'mb.account-token',
+  endlessRuns: 'mb.endless-runs',
 } as const

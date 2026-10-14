@@ -24,38 +24,37 @@ export interface UseGame {
   clearFeedback: () => void
 }
 
-export function useGame(category: CategorySlug, enabled: boolean): UseGame {
-  const [game, setGame] = useState<GameState | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<ApiError | null>(null)
+export interface GameMoves {
+  submitting: boolean
+  feedback: Feedback | null
+  guess: (text: string) => Promise<boolean>
+  skip: () => Promise<void>
+  clearFeedback: () => void
+  resetFeedback: () => void
+}
+
+/**
+ * Palpite e pulo de uma partida solo (diário ou ilimitado): mesma regra nos dois modos.
+ * Envia o número da tentativa esperada e trata reenvios e partidas já encerradas.
+ */
+export function useGameMoves(
+  game: GameState | null,
+  setGame: (game: GameState) => void,
+): GameMoves {
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
-  const [reloadKey, setReloadKey] = useState(0)
   const inFlight = useRef(false)
 
-  useEffect(() => {
-    if (!enabled) return
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    setFeedback(null)
-    api
-      .startGame(category)
-      .then((state) => !cancelled && setGame(state))
-      .catch((err: ApiError) => !cancelled && setError(err))
-      .finally(() => !cancelled && setLoading(false))
-    return () => {
-      cancelled = true
-    }
-  }, [category, enabled, reloadKey])
-
-  const refresh = useCallback(async (id: string) => {
-    try {
-      setGame(await api.game(id))
-    } catch {
-      /* mantém o estado atual */
-    }
-  }, [])
+  const refresh = useCallback(
+    async (id: string) => {
+      try {
+        setGame(await api.game(id))
+      } catch {
+        /* mantém o estado atual */
+      }
+    },
+    [setGame],
+  )
 
   const handleError = useCallback(
     async (err: unknown, id: string) => {
@@ -100,7 +99,7 @@ export function useGame(category: CategorySlug, enabled: boolean): UseGame {
         setSubmitting(false)
       }
     },
-    [game, handleError],
+    [game, handleError, setGame],
   )
 
   const skip = useCallback(async () => {
@@ -116,17 +115,45 @@ export function useGame(category: CategorySlug, enabled: boolean): UseGame {
       inFlight.current = false
       setSubmitting(false)
     }
-  }, [game, handleError])
+  }, [game, handleError, setGame])
+
+  const clearFeedback = useCallback(() => setFeedback(null), [])
+  return { submitting, feedback, guess, skip, clearFeedback, resetFeedback: clearFeedback }
+}
+
+export function useGame(category: CategorySlug, enabled: boolean): UseGame {
+  const [game, setGame] = useState<GameState | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<ApiError | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const moves = useGameMoves(game, setGame)
+  const { resetFeedback } = moves
+
+  useEffect(() => {
+    if (!enabled) return
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    resetFeedback()
+    api
+      .startGame(category)
+      .then((state) => !cancelled && setGame(state))
+      .catch((err: ApiError) => !cancelled && setError(err))
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [category, enabled, reloadKey, resetFeedback])
 
   return {
     game,
     loading,
     error,
-    submitting,
-    feedback,
+    submitting: moves.submitting,
+    feedback: moves.feedback,
     reload: () => setReloadKey((n) => n + 1),
-    guess,
-    skip,
-    clearFeedback: () => setFeedback(null),
+    guess: moves.guess,
+    skip: moves.skip,
+    clearFeedback: moves.clearFeedback,
   }
 }

@@ -1,4 +1,4 @@
-import { ChartColumn, CircleHelp, Info, WifiOff } from 'lucide-react'
+import { ChartColumn, CircleHelp, Info, Infinity as InfinityIcon, Users, WifiOff } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
@@ -25,6 +25,14 @@ function Header() {
       <div className={styles.headerInner}>
         <Logo />
         <nav aria-label="Principal" className={styles.nav}>
+          <NavLink to="/ilimitado" className={navClass} aria-label="Modo Ilimitado">
+            <InfinityIcon size={20} aria-hidden />
+            <span className={styles.navLabel} aria-hidden>Ilimitado</span>
+          </NavLink>
+          <NavLink to="/multiplayer" className={navClass} aria-label="Multiplayer">
+            <Users size={20} aria-hidden />
+            <span className={styles.navLabel} aria-hidden>Multiplayer</span>
+          </NavLink>
           <NavLink to="/estatisticas" className={navClass} aria-label="Estatísticas">
             <ChartColumn size={20} aria-hidden />
             <span className={styles.navLabel} aria-hidden>Estatísticas</span>
@@ -84,7 +92,7 @@ export function Layout({ children }: { children: ReactNode }) {
           event.preventDefault()
           const main = document.getElementById('conteudo')
           main?.focus()
-          main?.scrollIntoView()
+          main?.scrollIntoView?.()
         }}
       >
         Pular para o conteúdo

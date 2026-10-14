@@ -1,5 +1,6 @@
-import { CalendarDays, Flame, Play, Trophy } from 'lucide-react'
+import { CalendarDays, Flame, Infinity as InfinityIcon, Play, Trophy, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router'
 import { CategoryCard } from '../components/CategoryCard/CategoryCard'
 import { DemoBanner, ErrorState, Loading } from '../components/Feedback/States'
@@ -12,6 +13,7 @@ import { STORAGE_KEYS, readJSON, writeJSON } from '../services/storage'
 import type { Statistics } from '../types/api'
 import { formatChallengeDate, formatCountdown } from '../utils/format'
 import styles from './HomePage.module.css'
+import modes from './Modes.module.css'
 
 function useStatsSummary(enabled: boolean, refreshKey: string | undefined) {
   const [stats, setStats] = useState<Statistics | null>(() => readJSON(STORAGE_KEYS.stats))
@@ -83,6 +85,65 @@ export function HomePage() {
         </div>
       </section>
 
+      <section aria-labelledby="modos" className={styles.modesSection}>
+        <h2 id="modos" className={styles.sectionTitle}>
+          Escolha o modo de jogo
+        </h2>
+        <div className={modes.modes}>
+          <a
+            href="#categorias"
+            className={modes.modeCard}
+            style={{ '--accent': 'var(--red)' } as CSSProperties}
+            data-testid="mode-daily"
+            onClick={(event) => {
+              // Rola até as categorias sem trocar de rota (rotas em #/ no GitHub Pages).
+              event.preventDefault()
+              document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            <span className={modes.modeIcon}>
+              <CalendarDays size={22} aria-hidden />
+            </span>
+            <span className={modes.modeName}>Desafio Diário</span>
+            <span className={modes.modeText}>
+              Uma música secreta por categoria, igual para todo mundo. Muda à meia-noite (Brasília).
+            </span>
+            <span className={modes.modeTag}>{done}/6 hoje</span>
+          </a>
+          <Link
+            to="/ilimitado"
+            className={modes.modeCard}
+            style={{ '--accent': 'var(--purple-strong)' } as CSSProperties}
+            data-testid="mode-endless"
+          >
+            <span className={modes.modeIcon}>
+              <InfinityIcon size={22} aria-hidden />
+            </span>
+            <span className={modes.modeName}>Modo Ilimitado</span>
+            <span className={modes.modeText}>
+              Jogue sozinho quantas rodadas quiser, sem esperar o dia virar. Placar e sequência da sessão.
+            </span>
+            <span className={modes.modeTag}>Solo · sem limite</span>
+          </Link>
+          <Link
+            to="/multiplayer"
+            className={modes.modeCard}
+            style={{ '--accent': 'var(--amber)' } as CSSProperties}
+            data-testid="mode-multiplayer"
+          >
+            <span className={modes.modeIcon}>
+              <Users size={22} aria-hidden />
+            </span>
+            <span className={modes.modeName}>Multiplayer</span>
+            <span className={modes.modeText}>
+              Salas de 2 a 8 jogadores: 18 músicas, 3 de cada categoria, com placar ao vivo e bônus
+              por velocidade.
+            </span>
+            <span className={modes.modeTag}>Com conta · ao vivo</span>
+          </Link>
+        </div>
+      </section>
+
       <section className={styles.summary} aria-label="Resumo do dia">
         <div className={styles.summaryItem}>
           <Flame size={20} aria-hidden className={styles.flame} />
@@ -124,7 +185,7 @@ export function HomePage() {
       <section aria-labelledby="categorias">
         <div className={styles.sectionHead}>
           <h2 id="categorias" className={styles.sectionTitle}>
-            Escolha seu palco
+            Desafio diário: escolha seu palco
           </h2>
           {allDone && <p className={styles.allDone}>Você zerou o dia! Volte amanhã para o bis. 🤘</p>}
         </div>

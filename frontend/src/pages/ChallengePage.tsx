@@ -11,37 +11,17 @@ import { Mascot } from '../components/Mascot/Mascot'
 import { ResultPanel } from '../components/Result/ResultPanel'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
 import { useDaily } from '../hooks/useDaily'
-import type { Feedback } from '../hooks/useGame'
 import { useGame } from '../hooks/useGame'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { useRoundEffects } from '../hooks/useRoundEffects'
 import { usePlayer } from '../hooks/usePlayer'
-import type { CategorySlug, GameState } from '../types/api'
+import type { CategorySlug } from '../types/api'
 import { CATEGORY_THEMES, isCategorySlug } from '../utils/categories'
 import { formatChallengeDate } from '../utils/format'
 import { moodForGame } from '../utils/mascot'
-import { playCorrect, playWrong } from '../utils/sfx'
+import { speech } from '../utils/speech'
 import { NotFoundPage } from './NotFoundPage'
 import styles from './ChallengePage.module.css'
-
-function speech(game: GameState | null, feedback: Feedback | null, playing: boolean): string {
-  if (!game) return 'Afinando a guitarra…'
-  if (game.status === 'won') {
-    return game.attempts_used === 1 ? 'DE PRIMEIRA?! Você é lenda! 🤘' : 'É ISSO! Que ouvido, hein? 🤘'
-  }
-  if (game.status === 'lost') return 'Ihhh, arrebentou a corda! Amanhã tem revanche.'
-  if (feedback?.kind === 'info' || feedback?.kind === 'error') return feedback.text
-  if (feedback?.kind === 'wrong' && game.remaining_attempts > 2) {
-    return `Hmm… não é “${feedback.text}”. Escuta mais um pedaço!`
-  }
-  if (playing && !feedback) return 'Escuta só esse som…'
-  if (game.remaining_attempts === 1) return 'Última chance! Tô roendo as unhas aqui…'
-  if (game.guesses.length > 0 && game.remaining_attempts <= 2) {
-    return `Só restam ${game.remaining_attempts} tentativas! Tô suando frio…`
-  }
-  if (feedback?.kind === 'skip') return 'Pulou? Beleza, lá vai mais um pedaço!'
-  if (game.attempts_used === 0) return 'Aperte o play e me diga: que música é essa?'
-  return 'Ouve de novo com calma e manda o palpite!'
-}
 
 function Challenge({ category }: { category: CategorySlug }) {
   const theme = CATEGORY_THEMES[category]
@@ -57,24 +37,7 @@ function Challenge({ category }: { category: CategorySlug }) {
     document.title = `${theme.name}${game ? ` — Desafio #${game.challenge_number}` : ''} | Músicas Babuínas`
   }, [theme.name, game])
 
-  // Baixa antecipadamente o trecho liberado: o play responde na hora.
-  const { prefetch } = player
-  useEffect(() => {
-    if (game) prefetch(game.unlocked_stage)
-  }, [game, prefetch])
-
-  // Reações sonoras e próxima pista tocando automaticamente após erro/pulo.
-  const { play, volume } = player
-  useEffect(() => {
-    if (!game || !feedback) return
-    if (feedback.kind === 'wrong' || feedback.kind === 'skip') {
-      if (feedback.kind === 'wrong') playWrong(volume)
-      if (game.status === 'in_progress') void play(game.unlocked_stage)
-    } else if (feedback.kind === 'correct') {
-      playCorrect(volume)
-      window.setTimeout(() => void play(game.max_attempts), 700)
-    }
-  }, [feedback])
+  useRoundEffects(game, feedback, player)
 
   useEffect(() => {
     if (game && previousStatus.current === 'in_progress' && game.status !== 'in_progress') {
@@ -107,7 +70,7 @@ function Challenge({ category }: { category: CategorySlug }) {
         </span>
         <h1 className={styles.title}>Desafio #{game.challenge_number}</h1>
         <p className={styles.date}>
-          <CalendarDays size={15} aria-hidden /> {formatChallengeDate(game.date)}
+          <CalendarDays size={15} aria-hidden /> {game.date && formatChallengeDate(game.date)}
         </p>
       </header>
 
@@ -153,7 +116,15 @@ function Challenge({ category }: { category: CategorySlug }) {
 
       {finished && (
         <div id="resultado" className={styles.result}>
-          <ResultPanel game={game} onNewDay={daily.reload} />
+          <ResultPanel
+            game={game}
+            onNewDay={() => {
+              // Meia-noite em Brasília: a partida de ontem já acabou, então a página
+              // carrega o desafio novo desta categoria.
+              daily.reload()
+              reload()
+            }}
+          />
           {otherCategories.length > 0 && (
             <section className={styles.more} aria-labelledby="outras">
               <h2 id="outras" className={styles.moreTitle}>

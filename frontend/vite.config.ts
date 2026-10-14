@@ -11,11 +11,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { '/api': { target: apiTarget, changeOrigin: true } },
+    proxy: { '/api': { target: apiTarget, changeOrigin: true, ws: true } },
   },
   preview: {
     port: 4173,
-    proxy: { '/api': { target: apiTarget, changeOrigin: true } },
+    proxy: { '/api': { target: apiTarget, changeOrigin: true, ws: true } },
   },
   build: { target: 'es2022', sourcemap: false },
   test: {

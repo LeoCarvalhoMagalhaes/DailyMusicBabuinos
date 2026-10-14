@@ -1,12 +1,19 @@
-// Cliente HTTP da API. O token anônimo do jogador vai no cabeçalho Authorization.
+// Cliente HTTP da API. O token anônimo do jogador vai no cabeçalho Authorization; nas
+// rotas do multiplayer vai o token da conta (login), guardado à parte.
 
 import type {
+  Account,
+  AuthResult,
   CategorySlug,
   DailyOverview,
+  EndlessRound,
+  EndlessStats,
   GameState,
   GuessResult,
   HistoryPage,
   PlayerCreated,
+  RoomState,
+  RunSummary,
   SongSuggestion,
   Statistics,
 } from '../types/api'
@@ -30,9 +37,18 @@ export class ApiError extends Error {
 }
 
 let token: string | null = null
+let accountToken: string | null = null
 
 export function setApiToken(value: string | null): void {
   token = value
+}
+
+export function setAccountToken(value: string | null): void {
+  accountToken = value
+}
+
+export function getAccountToken(): string | null {
+  return accountToken
 }
 
 interface RequestOptions {
@@ -40,12 +56,18 @@ interface RequestOptions {
   body?: unknown
   signal?: AbortSignal
   auth?: boolean
+  // Rotas do multiplayer: usam o token da conta em vez do jogador anônimo.
+  account?: boolean
 }
 
-async function send(path: string, { method = 'GET', body, signal, auth = true }: RequestOptions) {
+async function send(
+  path: string,
+  { method = 'GET', body, signal, auth = true, account = false }: RequestOptions,
+) {
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  if (auth && token) headers.Authorization = `Bearer ${token}`
+  const bearer = account ? accountToken : token
+  if (auth && bearer) headers.Authorization = `Bearer ${bearer}`
   try {
     return await fetch(`${BASE}${path}`, {
       method,
@@ -74,8 +96,24 @@ async function toError(response: Response): Promise<ApiError> {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await send(path, options)
   if (!response.ok) throw await toError(response)
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
+
+async function clip(path: string, options: RequestOptions): Promise<AudioPayload> {
+  const response = await send(path, options)
+  if (!response.ok) throw await toError(response)
+  const duration = Number(response.headers.get('X-Clip-Duration') ?? '0')
+  return { blob: await response.blob(), duration }
+}
+
+/** Endereço do WebSocket do multiplayer (mesmo host da API; em dev, via proxy do Vite). */
+export function realtimeUrl(): string {
+  const base = BASE || window.location.origin
+  return `${base.replace(/^http/, 'ws')}/api/mp/ws`
+}
+
+const mp = { account: true } as const
 
 export interface AudioPayload {
   blob: Blob
@@ -98,10 +136,50 @@ export const api = {
   statistics: () => request<Statistics>('/api/statistics'),
   history: (limit = 30, offset = 0) =>
     request<HistoryPage>(`/api/history?limit=${limit}&offset=${offset}`),
-  async audio(id: string, stage: number, signal?: AbortSignal): Promise<AudioPayload> {
-    const response = await send(`/api/games/${id}/audio?stage=${stage}`, { signal })
-    if (!response.ok) throw await toError(response)
-    const duration = Number(response.headers.get('X-Clip-Duration') ?? '0')
-    return { blob: await response.blob(), duration }
-  },
+  audio: (id: string, stage: number, signal?: AbortSignal) =>
+    clip(`/api/games/${id}/audio?stage=${stage}`, { signal }),
+
+  // Modo ilimitado (palpite, pulo e áudio usam as rotas de partida acima).
+  endlessNext: (category: CategorySlug, runId: string | null) =>
+    request<EndlessRound>('/api/endless/next', { method: 'POST', body: { category, run_id: runId } }),
+  endlessRun: (runId: string) => request<RunSummary>(`/api/endless/runs/${runId}`),
+  endlessStats: () => request<EndlessStats>('/api/endless/stats'),
+
+  // Multiplayer.
+  register: (username: string, password: string, displayName: string) =>
+    request<AuthResult>('/api/auth/register', {
+      method: 'POST',
+      auth: false,
+      body: { username, password, display_name: displayName },
+    }),
+  login: (username: string, password: string) =>
+    request<AuthResult>('/api/auth/login', { method: 'POST', auth: false, body: { username, password } }),
+  logout: () => request<void>('/api/auth/logout', { method: 'POST', ...mp }),
+  account: () => request<Account>('/api/auth/me', mp),
+  createRoom: (order: CategorySlug[] | null) =>
+    request<RoomState>('/api/mp/rooms', { method: 'POST', body: { category_order: order }, ...mp }),
+  joinRoom: (code: string) =>
+    request<RoomState>('/api/mp/rooms/join', { method: 'POST', body: { code }, ...mp }),
+  room: (code: string, signal?: AbortSignal) =>
+    request<RoomState>(`/api/mp/rooms/${code}`, { signal, ...mp }),
+  setReady: (code: string, ready: boolean) =>
+    request<RoomState>(`/api/mp/rooms/${code}/ready`, { method: 'POST', body: { ready }, ...mp }),
+  setOrder: (code: string, order: CategorySlug[]) =>
+    request<RoomState>(`/api/mp/rooms/${code}/order`, {
+      method: 'POST',
+      body: { category_order: order },
+      ...mp,
+    }),
+  startMatch: (code: string) => request<RoomState>(`/api/mp/rooms/${code}/start`, { method: 'POST', ...mp }),
+  leaveRoom: (code: string) => request<void>(`/api/mp/rooms/${code}/leave`, { method: 'POST', ...mp }),
+  matchGuess: (code: string, round: number, attempt: number, guess: string) =>
+    request<{ correct: boolean; state: RoomState }>(`/api/mp/rooms/${code}/guess`, {
+      method: 'POST',
+      body: { round, attempt, guess },
+      ...mp,
+    }),
+  matchSkip: (code: string, round: number, attempt: number) =>
+    request<RoomState>(`/api/mp/rooms/${code}/skip`, { method: 'POST', body: { round, attempt }, ...mp }),
+  matchAudio: (code: string, round: number, stage: number, signal?: AbortSignal) =>
+    clip(`/api/mp/rooms/${code}/rounds/${round}/audio?stage=${stage}`, { signal, ...mp }),
 }

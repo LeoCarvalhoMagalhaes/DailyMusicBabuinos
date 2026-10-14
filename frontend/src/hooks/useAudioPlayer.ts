@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../services/api'
+import type { AudioPayload } from '../services/api'
 import { STORAGE_KEYS, readJSON, writeJSON } from '../services/storage'
 
 export type AudioStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error'
@@ -67,7 +68,17 @@ export function silentClipUrl(): string {
   return silentUrl
 }
 
-export function useAudioPlayer(gameId: string | null): AudioPlayer {
+/** Busca o trecho N. O padrão é a rota de partida (diário e ilimitado); o multiplayer
+ * passa a sua. A forma de tocar é a mesma nos três modos. */
+export type ClipFetcher = (stage: number) => Promise<AudioPayload>
+
+/**
+ * `gameId` identifica o que está tocando (partida ou rodada): ao mudar, o cache de
+ * trechos é descartado.
+ */
+export function useAudioPlayer(gameId: string | null, fetchClip?: ClipFetcher): AudioPlayer {
+  const fetchRef = useRef(fetchClip)
+  fetchRef.current = fetchClip
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const cacheRef = useRef(new Map<number, CachedClip>())
   const pendingRef = useRef(new Map<number, Promise<CachedClip>>())
@@ -146,8 +157,8 @@ export function useAudioPlayer(gameId: string | null): AudioPlayer {
       const pending = pendingRef.current.get(target)
       if (pending) return pending
       if (!gameId) return Promise.reject(new ApiError(0, 'no_game', 'Partida não carregada.'))
-      const promise = api
-        .audio(gameId, target)
+      const fetcher = fetchRef.current ?? ((stage: number) => api.audio(gameId, stage))
+      const promise = fetcher(target)
         .then(({ blob, duration: clipDuration }) => {
           const clip = { url: URL.createObjectURL(blob), duration: clipDuration }
           cacheRef.current.set(target, clip)

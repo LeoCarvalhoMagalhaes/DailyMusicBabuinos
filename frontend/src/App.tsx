@@ -6,8 +6,11 @@ import { Mascot } from './components/Mascot/Mascot'
 import { PlayerProvider } from './hooks/usePlayer'
 import { AboutPage } from './pages/AboutPage'
 import { ChallengePage } from './pages/ChallengePage'
+import { EndlessHubPage, EndlessPlayPage } from './pages/EndlessPage'
 import { HomePage } from './pages/HomePage'
+import { MultiplayerPage } from './pages/MultiplayerPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { RoomPage } from './pages/RoomPage'
 import { RulesPage } from './pages/RulesPage'
 import { StatsPage } from './pages/StatsPage'
 
@@ -50,6 +53,10 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/desafio/:category" element={<ChallengePage />} />
+      <Route path="/ilimitado" element={<EndlessHubPage />} />
+      <Route path="/ilimitado/:category" element={<EndlessPlayPage />} />
+      <Route path="/multiplayer" element={<MultiplayerPage />} />
+      <Route path="/multiplayer/sala/:code" element={<RoomPage />} />
       <Route path="/estatisticas" element={<StatsPage />} />
       <Route path="/como-jogar" element={<RulesPage />} />
       <Route path="/sobre" element={<AboutPage />} />

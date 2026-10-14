@@ -154,3 +154,28 @@ def test_small_catalog_repeats_oldest_song_when_exhausted(harness: Harness) -> N
         give_up(harness, headers, data["game"])
     stats = harness.client.get("/api/endless/stats", headers=headers).json()
     assert stats["overall"]["rounds"] == 40
+
+
+def test_simultaneous_requests_keep_a_single_open_round(main_harness: Harness) -> None:
+    from datetime import timedelta
+
+    from app.models import Player
+    from app.services import endless
+
+    h = main_harness
+    headers = h.new_player()
+    first = next_round(h, headers)
+    with h.app.state.session_factory() as db:
+        game = db.get(GameSession, first["game"]["id"])
+        # Simula a corrida: outra requisição gravou uma segunda rodada aberta.
+        twin = GameSession(id="00000000-0000-4000-8000-000000000001", mode="endless",
+                           category="rock", track_id=game.track_id + 1, run_id="outra",
+                           player_id=game.player_id, attempts_used=0, score=0, speed_bonus=0,
+                           status="in_progress", started_at=game.started_at + timedelta(seconds=1))
+        db.add(twin)
+        db.commit()
+        # Ao terminar a primeira, a próxima chamada encontra a gêmea e a usa.
+        player = db.get(Player, game.player_id)
+        kept = endless.next_round(db, h.settings, h.app.state.audio_provider, player, "rock",
+                                  None, h.clock.today(), h.clock.now())
+        assert kept.id == game.id  # a mais antiga vence
