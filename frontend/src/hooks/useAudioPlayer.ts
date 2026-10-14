@@ -40,12 +40,40 @@ function detectVolumeSupport(audio: HTMLAudioElement): boolean {
   }
 }
 
+let silentUrl: string | null = null
+
+/** WAV mudo de 10 ms (8 kHz, 8 bits), usado para liberar o elemento de áudio no iOS. */
+export function silentClipUrl(): string {
+  if (silentUrl) return silentUrl
+  const samples = 80
+  const bytes = new Uint8Array(44 + samples)
+  const view = new DataView(bytes.buffer)
+  const ascii = (offset: number, text: string) =>
+    [...text].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)))
+  ascii(0, 'RIFF')
+  view.setUint32(4, 36 + samples, true)
+  ascii(8, 'WAVEfmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true) // PCM
+  view.setUint16(22, 1, true) // mono
+  view.setUint32(24, 8000, true)
+  view.setUint32(28, 8000, true)
+  view.setUint16(32, 1, true)
+  view.setUint16(34, 8, true)
+  ascii(36, 'data')
+  view.setUint32(40, samples, true)
+  bytes.fill(128, 44) // silêncio em PCM de 8 bits
+  silentUrl = `data:audio/wav;base64,${btoa(String.fromCharCode(...bytes))}`
+  return silentUrl
+}
+
 export function useAudioPlayer(gameId: string | null): AudioPlayer {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const cacheRef = useRef(new Map<number, CachedClip>())
   const pendingRef = useRef(new Map<number, Promise<CachedClip>>())
   const rafRef = useRef<number>(0)
   const requestRef = useRef(0)
+  const unlockedRef = useRef(false)
   const [status, setStatus] = useState<AudioStatus>('idle')
   const [stage, setStage] = useState<number | null>(null)
   const [position, setPosition] = useState(0)
@@ -163,7 +191,18 @@ export function useAudioPlayer(gameId: string | null): AudioPlayer {
       setStage(target)
       setPosition(0)
       const cached = cacheRef.current.get(target)
-      if (!cached) setStatus('loading')
+      if (!cached) {
+        setStatus('loading')
+        // O Safari/iOS só deixa tocar dentro do toque; depois de esperar o download, o
+        // play() seria bloqueado. Tocar um som mudo agora libera este elemento de áudio.
+        if (!unlockedRef.current) {
+          unlockedRef.current = true
+          el.src = silentClipUrl()
+          el.play()?.catch(() => {
+            /* interrompido pelo trecho de verdade */
+          })
+        }
+      }
       try {
         const clip = cached ?? (await load(target))
         if (request !== requestRef.current) return
