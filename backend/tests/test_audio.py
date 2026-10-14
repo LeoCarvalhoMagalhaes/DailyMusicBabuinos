@@ -285,6 +285,39 @@ def test_deezer_looks_for_studio_version_in_artist_top_tracks() -> None:
     assert paths == ["/search", "/search", "/artist/927/top"]
 
 
+def test_deezer_prefers_right_version_credited_to_partner_over_other_remix() -> None:
+    # Real (14/10/2026): o sucesso do Spotify é "Friday - Dopamine Re-Edit" (Riton). No
+    # Deezer essa versão sai como Nightcrawlers; com o Riton só há outro remix.
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/search":
+            return httpx.Response(200, json={"data": [
+                _item(1, "Friday (feat. Mufasa & Hypeman)", "Nightcrawlers", 828_383,
+                      "(Dopamine Re-Edit)"),
+                _item(2, "Friday", "Riton", 93_582, "(Violett Sky Remix)"),
+            ]})
+        if request.url.path == "/track/1":
+            return httpx.Response(200, json={"id": 1, "contributors": [
+                {"name": "Riton"}, {"name": "Nightcrawlers"}, {"name": "Mufasa & Hypeman"},
+            ]})
+        return httpx.Response(200, json={"data": []})
+
+    track = _track(title="Friday", artist="Riton", aliases=["Friday - Dopamine Re-Edit"])
+    assert _deezer(handler).check_availability(track) is True
+    assert track.external_id == "1"
+
+
+def test_deezer_live_and_ao_vivo_are_the_same_version() -> None:
+    results = [
+        _item(1, "Liberdade Provisória", "Henrique & Juliano", 900_000,
+              "(Live - Ibirapuera / 2019)", album="Ao Vivo No Ibirapuera, Vol. 1"),
+        _item(2, "Liberdade Provisória", "Henrique & Juliano", 100_000, "(Acústico)"),
+    ]
+    track = _track(title="Liberdade Provisória", artist="Henrique & Juliano",
+                   aliases=["Liberdade Provisória (Live - Ibirapuera / 2019)"])
+    assert _search_provider(results).check_availability(track) is True
+    assert track.external_id == "1"
+
+
 def test_deezer_artist_names_ignore_spaces() -> None:
     results = [_item(1, "Seven (feat. Latto)", "Jungkook", 771_507)]
     track = _track(title="Seven", artist="Jung Kook")

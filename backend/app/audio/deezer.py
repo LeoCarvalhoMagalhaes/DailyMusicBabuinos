@@ -36,15 +36,17 @@ MAX_PREVIEW_BYTES = 2 * 1024 * 1024
 # Palavras que indicam uma versão diferente da gravação original.
 _VERSION_WORDS = re.compile(
     r"\b(live|ao vivo|en vivo|karaoke|instrumental|remix|acoustic|acustico|cover|tribute|"
-    r"demo|sped up|slowed|reverb|8d|orchestral|piano version|unplugged)\b"
+    r"demo|sped up|slowed|reverb|8d|orchestral|piano version|unplugged|re-edit|rework)\b"
 )
+# Mesma marca em outra língua: "Live - Ibirapuera" e o álbum "Ao Vivo No Ibirapuera".
+_SAME_VERSION = {"ao vivo": "live", "en vivo": "live", "acustico": "acoustic"}
 
 
 def _versions(text: str) -> set[str]:
     """Marcas de versão num texto (minúsculas, sem acentos; mantém sufixos como
     "- Acoustic Version", que `normalize` removeria)."""
     plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
-    return set(_VERSION_WORDS.findall(plain))
+    return {_SAME_VERSION.get(word, word) for word in _VERSION_WORDS.findall(plain)}
 
 
 def _artist_score(wanted: str, found: str) -> int:
@@ -97,8 +99,10 @@ class DeezerProvider(AudioProvider):
         queries = [f"{track.artist} {track.title}",
                    f'artist:"{track.artist}" track:"{track.title}"']
         fallback: dict | None = None  # artista certo, mas só em outra versão (ex.: ao vivo)
+        seen: list[dict] = []
         for query in queries:
             data = self._api("/search", {"q": query, "limit": 25}).get("data", [])
+            seen.extend(data)
             match = self._scored_match(track, data)
             if match is None:
                 item = self._match_by_contributors(track, data)
@@ -111,6 +115,11 @@ class DeezerProvider(AudioProvider):
             fallback = fallback or item
         if fallback is None:
             return None
+        # Real (14/10/2026): o "Friday (Dopamine Re-Edit)" do Spotify está creditado ao
+        # Nightcrawlers no Deezer; o que sai com o Riton é outro remix.
+        item = self._match_by_contributors(track, seen, studio_only=True)
+        if item:
+            return item
         # Real (14/10/2026): "Oasis Wonderwall" só traz versões ao vivo; a de estúdio está
         # nas mais tocadas do artista no Deezer.
         artist_id = (fallback.get("artist") or {}).get("id")
@@ -163,12 +172,14 @@ class DeezerProvider(AudioProvider):
         return best
 
     def _match_by_contributors(self, track: MusicTrack, data: list[dict],
-                               max_lookups: int = 3) -> dict | None:
+                               max_lookups: int = 3, studio_only: bool = False
+                               ) -> dict | None:
         """Parcerias: o Deezer às vezes credita outro artista como principal da mesma
         gravação (ex.: "Something Just Like This" sai como Coldplay, não The Chainsmokers).
         Confere os `contributors` dos candidatos mais populares em /track/<id>."""
-        candidates = sorted(self._candidates(track, data),
-                            key=lambda c: (c[0], int(c[1].get("rank") or 0)), reverse=True)
+        candidates = sorted(
+            (c for c in self._candidates(track, data) if c[0] or not studio_only),
+            key=lambda c: (c[0], int(c[1].get("rank") or 0)), reverse=True)
         for _, item in candidates[:max_lookups]:
             details = self._api(f"/track/{item['id']}")
             names = [c.get("name", "") for c in details.get("contributors") or []]
