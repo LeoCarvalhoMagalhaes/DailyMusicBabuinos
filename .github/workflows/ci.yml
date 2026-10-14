@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: babuinos
+          POSTGRES_PASSWORD: babuinos
+          POSTGRES_DB: babuinos_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U babuinos" --health-interval 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check app tests
+      - name: Testes (SQLite)
+        run: pytest
+      - name: Testes (PostgreSQL)
+        run: pytest
+        env:
+          TEST_DATABASE_URL: postgresql://babuinos:babuinos@localhost:5432/babuinos_test
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Dependências
+        run: |
+          cd frontend && npm ci
+          cd ../backend && python -m venv .venv && .venv/bin/pip install -r requirements.txt
+      - name: Tipos, testes unitários e build
+        working-directory: frontend
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Testes de ponta a ponta (desktop e celular)
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test

@@ -155,6 +155,10 @@
   gap: 6px;
 }
 
+.chip svg {
+  flex: none;
+}
+
 .chip {
   min-height: 40px;
   display: inline-flex;
