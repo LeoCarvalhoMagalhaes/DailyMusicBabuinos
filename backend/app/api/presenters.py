@@ -38,12 +38,14 @@ def answer_out(game: GameSession, provider: AudioProvider) -> AnswerOut | None:
 
 def game_state(game: GameSession, settings: Settings, provider: AudioProvider,
                clock: Clock) -> GameState:
-    challenge = game.challenge
+    challenge = game.challenge  # só no modo diário
     return GameState(
         id=game.id,
-        category=category_out(challenge.category),
-        date=challenge.challenge_date,
-        challenge_number=challenge_number(settings, challenge.challenge_date),
+        mode=game.mode,  # type: ignore[arg-type]
+        category=category_out(game.category),
+        date=challenge.challenge_date if challenge else None,
+        challenge_number=challenge_number(settings, challenge.challenge_date)
+        if challenge else None,
         status=game.status,  # type: ignore[arg-type]
         attempts_used=game.attempts_used,
         max_attempts=settings.max_attempts,
@@ -51,6 +53,7 @@ def game_state(game: GameSession, settings: Settings, provider: AudioProvider,
         unlocked_stage=unlocked_stage(game, settings),
         stages_seconds=settings.clip_stages_seconds,
         score=game.score,
+        speed_bonus=game.speed_bonus,
         guesses=[
             GuessOut(attempt=g.attempt_number, text=g.guess_text, skipped=g.is_skip,
                      correct=g.is_correct)
@@ -63,6 +66,7 @@ def game_state(game: GameSession, settings: Settings, provider: AudioProvider,
 
 def history_item(game: GameSession, settings: Settings, provider: AudioProvider) -> HistoryItem:
     challenge = game.challenge
+    assert challenge is not None  # o histórico só lista partidas diárias
     return HistoryItem(
         game_id=game.id,
         date=challenge.challenge_date,

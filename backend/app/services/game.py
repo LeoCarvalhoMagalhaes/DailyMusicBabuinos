@@ -1,5 +1,9 @@
 """Regras da partida. O backend é a autoridade sobre tentativas, pontuação e resultado.
 
+A mecânica é a mesma nos três modos (diário, ilimitado e multiplayer): seis
+tentativas, trechos progressivos, validação tolerante e a mesma tabela de pontos.
+Cada modo só decide qual música entra na partida e quando ela pode ser jogada.
+
 Separação de responsabilidades:
 - Este módulo cuida de tentativas, validação e pontuação.
 - O áudio fica em `app.audio`; aqui só decidimos QUAL estágio o jogador pode ouvir.
@@ -9,6 +13,7 @@ Separação de responsabilidades:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
 from urllib.parse import quote
@@ -20,12 +25,23 @@ from sqlalchemy.orm import Session
 from app.audio.base import AudioProvider
 from app.core.config import Settings
 from app.core.errors import AppError, ConflictError, ForbiddenError, NotFoundError
-from app.models import GameGuess, GameSession, MusicTrack, Player
+from app.models import (
+    MODE_DAILY,
+    MODE_ENDLESS,
+    GameGuess,
+    GameSession,
+    MusicTrack,
+    Player,
+)
 from app.services import answers
 from app.services.catalog import catalog_index
 from app.services.daily import get_or_create_challenge
 from app.services.scoring import score_for
 from app.services.stats import refresh_player_stats
+
+# Modos jogados pelas rotas /api/games (jogador anônimo). As rodadas multiplayer têm
+# rotas próprias, que conferem o tempo da rodada antes de aceitar a jogada.
+SOLO_MODES = (MODE_DAILY, MODE_ENDLESS)
 
 
 @dataclass(frozen=True)
@@ -45,14 +61,22 @@ def unlocked_stage(game: GameSession, settings: Settings) -> int:
     return min(game.attempts_used + 1, settings.max_attempts)
 
 
+def new_session(player_id: str, track_id: int, category: str, mode: str, now: datetime,
+                **links: object) -> GameSession:
+    return GameSession(id=str(uuid.uuid4()), mode=mode, category=category, track_id=track_id,
+                       player_id=player_id, attempts_used=0, score=0, speed_bonus=0,
+                       status="in_progress", started_at=now, **links)
+
+
 def start_game(db: Session, settings: Settings, provider: AudioProvider, player: Player,
                category: str, today: date, now: datetime) -> GameSession:
+    """Desafio diário: uma partida por jogador e desafio (idempotente)."""
     challenge = get_or_create_challenge(db, settings, provider, category, today, now)
     existing = _find_game(db, player.id, challenge.id)
     if existing:
         return existing
-    game = GameSession(id=str(uuid.uuid4()), challenge_id=challenge.id, player_id=player.id,
-                       attempts_used=0, score=0, status="in_progress", started_at=now)
+    game = new_session(player.id, challenge.track_id, category, MODE_DAILY, now,
+                       challenge_id=challenge.id)
     db.add(game)
     try:
         db.commit()
@@ -74,8 +98,8 @@ def _find_game(db: Session, player_id: str, challenge_id: int) -> GameSession | 
     )
 
 
-def load_game(db: Session, player: Player, game_id: str, *, for_update: bool = False
-              ) -> GameSession:
+def load_game(db: Session, player: Player, game_id: str, *, for_update: bool = False,
+              modes: Iterable[str] = SOLO_MODES) -> GameSession:
     try:
         uuid.UUID(game_id)
     except ValueError as exc:
@@ -84,8 +108,9 @@ def load_game(db: Session, player: Player, game_id: str, *, for_update: bool = F
     if for_update:
         stmt = stmt.with_for_update()
     game = db.scalar(stmt)
-    # Partidas de outros jogadores respondem 404 (não revelamos que existem).
-    if game is None or game.player_id != player.id:
+    # Partidas de outros jogadores (ou de outro modo) respondem 404: não revelamos
+    # que existem.
+    if game is None or game.player_id != player.id or game.mode not in tuple(modes):
         raise NotFoundError("Partida não encontrada.")
     return game
 
@@ -103,7 +128,7 @@ def _check_turn(game: GameSession, settings: Settings, expected_attempt: int) ->
 
 
 def _register(db: Session, settings: Settings, game: GameSession, guess: GameGuess,
-              now: datetime) -> GameSession:
+              now: datetime, *, commit: bool = True) -> GameSession:
     game.attempts_used += 1
     guess.attempt_number = game.attempts_used
     guess.created_at = now
@@ -122,15 +147,16 @@ def _register(db: Session, settings: Settings, game: GameSession, guess: GameGue
         # Duas requisições simultâneas para a mesma tentativa: só uma é gravada.
         db.rollback()
         raise ConflictError("Esta tentativa já foi registrada.", code="attempt_mismatch") from exc
-    if game.finished:
+    if game.finished and game.mode == MODE_DAILY:
         refresh_player_stats(db, settings, game.player_id, now)
-    db.commit()
+    if commit:
+        db.commit()
     return game
 
 
-def submit_guess(db: Session, settings: Settings, player: Player, game_id: str, raw_guess: str,
-                 expected_attempt: int, now: datetime) -> tuple[GameSession, bool]:
-    game = load_game(db, player, game_id, for_update=True)
+def apply_guess(db: Session, settings: Settings, game: GameSession, raw_guess: str,
+                expected_attempt: int, now: datetime, *, commit: bool = True) -> bool:
+    """Registra um palpite numa partida já carregada (e travada). Devolve se acertou."""
     _check_turn(game, settings, expected_attempt)
     text = answers.clean_guess(raw_guess)
     normalized = answers.normalize(text)
@@ -138,20 +164,33 @@ def submit_guess(db: Session, settings: Settings, player: Player, game_id: str, 
         raise AppError("Digite o nome de uma música.", code="empty_guess", status_code=422)
     if any(g.normalized == normalized and not g.is_skip for g in game.guesses):
         raise ConflictError("Você já tentou essa! Escolha outra música.", code="duplicate_guess")
-    track = game.challenge.track
+    track = game.track
     others = catalog_index.titles(db, settings.catalog_edition)
     correct = answers.is_correct(text, track.title, track.aliases, others)
     guess = GameGuess(guess_text=text, normalized=normalized[:200], is_skip=False,
                       is_correct=correct)
-    return _register(db, settings, game, guess, now), correct
+    _register(db, settings, game, guess, now, commit=commit)
+    return correct
+
+
+def apply_skip(db: Session, settings: Settings, game: GameSession, expected_attempt: int,
+               now: datetime, *, commit: bool = True) -> GameSession:
+    _check_turn(game, settings, expected_attempt)
+    guess = GameGuess(guess_text="", normalized="", is_skip=True, is_correct=False)
+    return _register(db, settings, game, guess, now, commit=commit)
+
+
+def submit_guess(db: Session, settings: Settings, player: Player, game_id: str, raw_guess: str,
+                 expected_attempt: int, now: datetime) -> tuple[GameSession, bool]:
+    game = load_game(db, player, game_id, for_update=True)
+    correct = apply_guess(db, settings, game, raw_guess, expected_attempt, now)
+    return game, correct
 
 
 def skip_turn(db: Session, settings: Settings, player: Player, game_id: str,
               expected_attempt: int, now: datetime) -> GameSession:
     game = load_game(db, player, game_id, for_update=True)
-    _check_turn(game, settings, expected_attempt)
-    guess = GameGuess(guess_text="", normalized="", is_skip=True, is_correct=False)
-    return _register(db, settings, game, guess, now)
+    return apply_skip(db, settings, game, expected_attempt, now)
 
 
 def check_audio_access(game: GameSession, settings: Settings, stage: int) -> float:
@@ -167,7 +206,11 @@ def reveal_answer(game: GameSession, provider: AudioProvider) -> RevealedAnswer:
     """Único ponto que expõe a música secreta — e só para partidas encerradas."""
     if not game.finished:
         raise ForbiddenError("A resposta só aparece no fim da partida.", code="game_in_progress")
-    track = game.challenge.track
+    return reveal_track(game.track, provider)
+
+
+def reveal_track(track: MusicTrack, provider: AudioProvider) -> RevealedAnswer:
+    """Dados públicos da música. Quem chama garante que ela já pode ser revelada."""
     meta = provider.metadata(track)
     return RevealedAnswer(track.title, track.artist, meta.cover_url, meta.external_url,
                           spotify_link(track), meta.attribution)
@@ -182,4 +225,3 @@ def spotify_link(track: MusicTrack) -> str | None:
     if track.edition == "main":
         return "https://open.spotify.com/search/" + quote(f"{track.title} {track.artist}")
     return None
-

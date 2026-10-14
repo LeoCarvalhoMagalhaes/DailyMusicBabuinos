@@ -18,6 +18,9 @@ CategorySlug = Literal["rock", "pop", "rap", "country", "eletronica", "geral"]
 assert set(CategorySlug.__args__) == set(CATEGORY_SLUGS)  # type: ignore[attr-defined]
 
 GameStatus = Literal["in_progress", "won", "lost"]
+GameMode = Literal["daily", "endless", "match"]
+# Apelido: em classes com um campo chamado `date`, o nome do tipo fica encoberto.
+DateType = date
 
 
 class ErrorBody(BaseModel):
@@ -116,9 +119,11 @@ class AnswerOut(BaseModel):
 
 class GameState(BaseModel):
     id: str
+    mode: GameMode = "daily"
     category: CategoryOut
-    date: date
-    challenge_number: int
+    # Só no desafio diário.
+    date: DateType | None = None
+    challenge_number: int | None = None
     status: GameStatus
     attempts_used: int
     max_attempts: int
@@ -126,6 +131,8 @@ class GameState(BaseModel):
     unlocked_stage: int
     stages_seconds: list[float]
     score: int
+    # Multiplayer: parte de `score` que veio do bônus de velocidade.
+    speed_bonus: int = 0
     guesses: list[GuessOut]
     answer: AnswerOut | None = None
     next_reset_at: datetime

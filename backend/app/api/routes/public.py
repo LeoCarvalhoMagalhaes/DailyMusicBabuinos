@@ -85,7 +85,7 @@ def daily_overview(db: Session = Depends(get_db), settings: Settings = Depends(g
     today = clock.today()
     by_category = {}
     if player is not None:
-        by_category = {g.challenge.category: g
+        by_category = {g.category: g
                        for g in games_for_day(db, player.id, today, settings.catalog_edition)}
         now = clock.now()
         if now - as_utc(player.last_seen_at) > timedelta(hours=12):
