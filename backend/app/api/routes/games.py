@@ -90,7 +90,7 @@ def audio(game_id: str, stage: int = Query(ge=1, le=50), db: Session = Depends(g
     """Entrega somente o trecho liberado. A URL não contém nada sobre a música, e o
     arquivo vai sem metadados. Erros do provedor retornam 503 sem afetar a partida."""
     limiter.hit(f"audio:{player.id}", settings.rate_limit_audio_per_minute, 60)
-    game = game_service.load_game(db, player, game_id)
+    game = game_service.load_game(db, player, game_id, with_guesses=False)
     seconds = game_service.check_audio_access(game, settings, stage)
     clip = provider.get_clip(game.track, seconds, category=game.category)
     db.commit()  # persiste ids externos eventualmente resolvidos pelo provedor

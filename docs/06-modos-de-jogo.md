@@ -54,8 +54,9 @@ Rodadas solo sem limite, em qualquer das seis categorias.
 - **Sem spoiler do diário:** nenhuma música que é desafio diário hoje (em qualquer categoria)
   é sorteada. O servidor publica os desafios do dia antes de sortear, se ainda não existirem.
 - **Sem trocar de música:** pedir a próxima com uma rodada em andamento devolve a mesma
-  rodada. Para passar, é preciso acertar, gastar as seis tentativas ou desistir. Duas
-  requisições simultâneas nunca deixam duas rodadas abertas.
+  rodada. Para passar, é preciso acertar, gastar as seis tentativas ou desistir. Um índice
+  único parcial no banco (`uq_endless_open_round`) garante uma única rodada aberta por
+  jogador e categoria, mesmo com requisições simultâneas.
 - **Sessão:** `run_id` agrupa as rodadas de uma sessão. O placar da sessão mostra pontos,
   músicas acertadas, acertos seguidos e melhor sequência. "Nova sessão" zera o placar.
 - **Estatísticas próprias** (geral e por categoria: rodadas, acertos, taxa, pontos, média,

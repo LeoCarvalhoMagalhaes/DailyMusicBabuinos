@@ -20,7 +20,7 @@ from urllib.parse import quote
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.audio.base import AudioProvider
 from app.core.config import Settings
@@ -99,14 +99,20 @@ def _find_game(db: Session, player_id: str, challenge_id: int) -> GameSession | 
 
 
 def load_game(db: Session, player: Player, game_id: str, *, for_update: bool = False,
-              modes: Iterable[str] = SOLO_MODES) -> GameSession:
+              modes: Iterable[str] = SOLO_MODES, with_guesses: bool = True) -> GameSession:
     try:
         uuid.UUID(game_id)
     except ValueError as exc:
         raise NotFoundError("Partida não encontrada.") from exc
-    stmt = select(GameSession).where(GameSession.id == game_id)
+    # Carrega a música, o desafio e os palpites junto com a partida: menos idas ao banco
+    # por jogada (cada uma custa uma viagem até o servidor do banco).
+    stmt = (select(GameSession).where(GameSession.id == game_id)
+            .options(joinedload(GameSession.track), joinedload(GameSession.challenge)))
+    if with_guesses:
+        stmt = stmt.options(selectinload(GameSession.guesses))
     if for_update:
-        stmt = stmt.with_for_update()
+        # Trava só a linha da partida (as junções são do lado opcional).
+        stmt = stmt.with_for_update(of=GameSession)
     game = db.scalar(stmt)
     # Partidas de outros jogadores (ou de outro modo) respondem 404: não revelamos
     # que existem.

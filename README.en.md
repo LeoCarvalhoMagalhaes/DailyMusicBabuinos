@@ -62,8 +62,8 @@ API with PostgreSQL.
 ## Tests
 
 ```bash
-cd backend && pytest                       # 183 tests (also run on PostgreSQL via TEST_DATABASE_URL)
-cd frontend && npm run typecheck && npm test && npm run e2e   # 39 unit + 18 E2E (desktop & mobile)
+cd backend && pytest                       # 185 tests (also run on PostgreSQL via TEST_DATABASE_URL)
+cd frontend && npm run typecheck && npm test && npm run e2e   # 41 unit + 18 E2E (desktop & mobile)
 ```
 
 ## Documentation (Portuguese)

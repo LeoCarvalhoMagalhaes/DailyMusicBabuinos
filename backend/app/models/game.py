@@ -12,6 +12,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import text
 
 from app.database.session import Base
 from app.models.catalog import MusicTrack
@@ -36,6 +37,11 @@ class GameSession(Base):
         UniqueConstraint("player_id", "match_round_id", name="uq_game_player_round"),
         Index("ix_game_player_status", "player_id", "status"),
         Index("ix_game_player_mode_category", "player_id", "mode", "category"),
+        # Modo ilimitado: no máximo uma rodada aberta por jogador e categoria, mesmo com
+        # requisições simultâneas (índice único parcial, no SQLite e no PostgreSQL).
+        Index("uq_endless_open_round", "player_id", "category", unique=True,
+              sqlite_where=text("mode = 'endless' AND status = 'in_progress'"),
+              postgresql_where=text("mode = 'endless' AND status = 'in_progress'")),
     )
 
     # Identificador público opaco (UUID4 em texto).

@@ -45,6 +45,13 @@ VERSION = "1.0.0"
 router = APIRouter(prefix="/api")
 
 
+@router.get("/ping", tags=["infra"])
+def ping() -> dict[str, str]:
+    """Resposta leve, sem banco: para monitores que mantêm a API acordada no plano
+    gratuito do Render sem acordar o banco (nem gastar as horas gratuitas dele)."""
+    return {"status": "ok"}
+
+
 @router.get("/health", response_model=HealthOut, tags=["infra"])
 def health(db: Session = Depends(get_db), settings: Settings = Depends(get_settings),
            provider: AudioProvider = Depends(get_provider)) -> HealthOut:
