@@ -44,7 +44,7 @@ Reproduzimos os conceitos funcionais com implementação, identidade e textos pr
 
 - Seis categorias independentes (Rock, Pop, Rap, Country, Eletrônica, Geral), cada uma com
   seu desafio diário.
-- **Pistas por duração** (1, 2, 3, 5, 8 e 12 s, configuráveis) em vez de camadas de
+- **Pistas por duração** (0,5, 1, 2, 4, 8 e 16 s, dobrando a cada pista; configuráveis) em vez de camadas de
   instrumentos: prévias licenciadas de serviços musicais não trazem faixas separadas.
 - Seis tentativas; pular consome uma tentativa; palpite repetido não conta; falha de áudio
   nunca consome tentativa.

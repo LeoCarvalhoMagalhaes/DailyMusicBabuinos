@@ -43,8 +43,9 @@ Trocar de provedor não muda nenhuma regra do jogo.
     `title_version`, `artist.name`, `album.cover_big`, `link`, `rank`); `/track/<id>` traz
     também `readable` e `contributors`.
   - A prévia é um MP3 de 29,99 s (MPEG-1 Layer III, 128 kbps, 44,1 kHz, joint stereo), com
-    uma tag ID3v2.4 vazia de 10 bytes e sem quadro Xing/Info. Cortada em 1, 2, 3, 5, 8 e
-    12 s, rende 1,019 / 2,011 / 3,004 / 5,016 / 8,020 / 12,016 s, sem ID3 nem Xing, e toca no
+    uma tag ID3v2.4 vazia de 10 bytes e sem quadro Xing/Info. Cortada nas pistas atuais
+    (0,5, 1, 2, 4, 8 e 16 s), rende 0,522 / 1,019 / 2,011 / 4,023 / 8,020 / 16,013 s (cada
+    quadro MP3 tem 26 ms, então o corte arredonda para cima), sem ID3 nem Xing, e toca no
     Chromium (Web Audio e `<audio>` informam a duração do trecho, não a do original).
   - O teste `test_trim_real_deezer_layout` reproduz esse layout com um MP3 gerado (nenhum
     áudio de terceiros no repositório); `DEEZER_LIVE=1 pytest -k live_deezer` repete a

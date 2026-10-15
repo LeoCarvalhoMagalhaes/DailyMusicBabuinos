@@ -11,9 +11,11 @@ export function siteUrl(): string {
   return SITE_URL || new URL(import.meta.env.BASE_URL, window.location.origin).href
 }
 
-/** Uma célula por tentativa: 🟥 erro, ⬜ pulou, 🟩 acerto, ⬛ não usada. */
+/** Uma célula por tentativa: 🟥 erro, 🟨 artista certo, ⬜ pulou, 🟩 acerto, ⬛ não usada. */
 export function resultGrid(game: Pick<GameState, 'guesses' | 'max_attempts'>): string {
-  const cells: string[] = game.guesses.map((g) => (g.correct ? '🟩' : g.skipped ? '⬜' : '🟥'))
+  const cells: string[] = game.guesses.map((g) =>
+    g.correct ? '🟩' : g.skipped ? '⬜' : g.same_artist ? '🟨' : '🟥',
+  )
   while (cells.length < game.max_attempts) cells.push('⬛')
   return cells.join('')
 }

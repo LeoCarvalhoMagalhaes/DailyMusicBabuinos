@@ -6,7 +6,7 @@ import { ApiError, api } from '../services/api'
 import type { CategorySlug, GameState } from '../types/api'
 
 export type Feedback =
-  | { kind: 'wrong'; text: string }
+  | { kind: 'wrong'; text: string; sameArtist?: boolean }
   | { kind: 'skip' }
   | { kind: 'correct' }
   | { kind: 'info'; text: string }
@@ -89,7 +89,12 @@ export function useGameMoves(
       try {
         const result = await api.guess(game.id, trimmed, game.attempts_used + 1)
         setGame(result.game)
-        setFeedback(result.correct ? { kind: 'correct' } : { kind: 'wrong', text: trimmed })
+        const last = result.game.guesses.at(-1)
+        setFeedback(
+          result.correct
+            ? { kind: 'correct' }
+            : { kind: 'wrong', text: trimmed, sameArtist: !!last?.same_artist },
+        )
         return true
       } catch (err) {
         await handleError(err, game.id)

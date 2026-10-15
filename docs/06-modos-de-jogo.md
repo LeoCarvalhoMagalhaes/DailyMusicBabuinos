@@ -1,7 +1,7 @@
 # Modos de jogo
 
 O jogo tem três modos, apresentados na página inicial. Os três usam **a mesma mecânica**:
-seis tentativas, trechos progressivos de 1, 2, 3, 5, 8 e 12 s da gravação original (prévias
+seis tentativas, trechos que dobram a cada pista — 0,5, 1, 2, 4, 8 e 16 s — da gravação original (prévias
 do Deezer cortadas no servidor e entregues por partes), a mesma validação tolerante de
 respostas e a mesma tabela base de pontos (100/80/60/40/20/10). O que muda é de onde vem a
 música e como as rodadas se agrupam.
@@ -17,6 +17,15 @@ música e como as rodadas se agrupam.
 No código, toda rodada de qualquer modo é uma linha de `game_sessions` com `mode` =
 `daily`, `endless` ou `match`. Palpite, pulo, áudio e revelação são as mesmas funções
 (`services/game.py`); cada modo só decide qual música entra e quando ela pode ser jogada.
+
+## Palpite do mesmo artista (amarelo)
+
+Nos três modos, um palpite errado que é **outra música do mesmo artista** da resposta fica
+**amarelo** ("quase"), com o aviso "Mesmo artista!" e um comentário do Babuíno; no texto de
+compartilhamento vira 🟨. O servidor decide: procura no catálogo as músicas com o título
+palpitado e compara o artista (inclusive cada parte de parcerias como "A & B"). A marca é
+guardada no palpite (`game_guesses.same_artist`). No multiplayer ela aparece só para quem
+palpitou; os outros continuam vendo apenas o andamento. A pontuação não muda.
 
 ## Desafio Diário
 

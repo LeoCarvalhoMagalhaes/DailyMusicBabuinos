@@ -21,7 +21,8 @@ música toca um pouco mais. O mascote **Babuíno do Rock** reage a cada jogada.
   mexer no diário) e Multiplayer (contas, salas de 2 a 8 com código de convite, 18 músicas —
   3 por categoria —, placar ao vivo por WebSocket, bônus de velocidade, reconexão e
   classificação final). Veja [06 — Modos de jogo](docs/06-modos-de-jogo.md).
-- **Pistas progressivas** (1, 2, 3, 5, 8 e 12 s, configuráveis), seis tentativas, botão de
+- **Pistas exponenciais** (0,5, 1, 2, 4, 8 e 16 s: cada uma dobra a anterior; configuráveis),
+  palpite errado do **mesmo artista em amarelo** ("quase"), seis tentativas, botão de
   pular e pontuação 100/80/60/40/20/10.
 - **Backend como autoridade:** tentativas, validação e pontos no servidor; a música secreta
   nunca chega ao navegador antes do fim; o áudio é cortado no servidor e entregue sem
@@ -100,11 +101,11 @@ python -m app.cli purge-inactive --days 400  # retenção de dados
 ## Testes
 
 ```bash
-cd backend && pytest                                   # 179 testes (SQLite; 1 só com DEEZER_LIVE=1)
+cd backend && pytest                                   # 183 testes (SQLite; 1 só com DEEZER_LIVE=1)
 TEST_DATABASE_URL=postgresql://user:senha@localhost:5432/babuinos_test pytest   # mesmos testes no PostgreSQL
 
 cd frontend
-npm run typecheck && npm test                          # 37 testes Vitest
+npm run typecheck && npm test                          # 39 testes Vitest
 npx playwright install chromium                        # uma vez
 npm run e2e                                            # 18 testes E2E (desktop + celular)
 E2E_WEBKIT=1 npm run e2e                               # + 9 no WebKit (iPhone); antes: npx playwright install webkit

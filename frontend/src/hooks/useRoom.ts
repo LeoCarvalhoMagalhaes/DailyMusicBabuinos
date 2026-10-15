@@ -180,7 +180,12 @@ export function useRoom(code: string, enabled: boolean): UseRoom {
       await run(async () => {
         const result = await api.matchGuess(code, match.current_round, game.attempts_used + 1, trimmed)
         accepted = true
-        setFeedback(result.correct ? { kind: 'correct' } : { kind: 'wrong', text: trimmed })
+        const last = result.state.match?.my_game?.guesses.at(-1)
+        setFeedback(
+          result.correct
+            ? { kind: 'correct' }
+            : { kind: 'wrong', text: trimmed, sameArtist: !!last?.same_artist },
+        )
         return result.state
       })
       return accepted

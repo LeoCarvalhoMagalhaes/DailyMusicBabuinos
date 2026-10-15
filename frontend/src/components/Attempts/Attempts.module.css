@@ -94,6 +94,25 @@
   color: var(--danger);
 }
 
+/* Errou a música, mas acertou o artista: amarelo de "quase". */
+.close {
+  border-color: rgb(251 191 36 / 0.6);
+  background: rgb(251 191 36 / 0.1);
+}
+
+.close .icon,
+.close .number,
+.close .hint {
+  color: var(--amber);
+}
+
+.hint {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .skipped {
   border-color: var(--border-strong);
 }

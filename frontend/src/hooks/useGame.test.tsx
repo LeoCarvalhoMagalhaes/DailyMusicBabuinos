@@ -17,6 +17,25 @@ vi.mock('../services/api', async (importOriginal) => {
 })
 
 describe('useGame', () => {
+  it('avisa quando o palpite errado é do mesmo artista', async () => {
+    mocks.startGame.mockResolvedValue(makeGame())
+    mocks.guess.mockResolvedValue({
+      correct: false,
+      game: makeGame({
+        attempts_used: 1,
+        remaining_attempts: 5,
+        unlocked_stage: 2,
+        guesses: [{ attempt: 1, text: 'We Will Rock You', skipped: false, correct: false, same_artist: true }],
+      }),
+    })
+    const { result } = renderHook(() => useGame('rock', true))
+    await waitFor(() => expect(result.current.game).not.toBeNull())
+    await act(async () => {
+      await result.current.guess('We Will Rock You')
+    })
+    expect(result.current.feedback).toEqual({ kind: 'wrong', text: 'We Will Rock You', sameArtist: true })
+  })
+
   beforeEach(() => vi.clearAllMocks())
 
   it('envia a tentativa esperada e atualiza com a resposta do servidor', async () => {
@@ -35,7 +54,7 @@ describe('useGame', () => {
     })
     expect(mocks.guess).toHaveBeenCalledWith(after.id, 'Hey Jude', 1)
     expect(result.current.game?.unlocked_stage).toBe(2)
-    expect(result.current.feedback).toEqual({ kind: 'wrong', text: 'Hey Jude' })
+    expect(result.current.feedback).toEqual({ kind: 'wrong', text: 'Hey Jude', sameArtist: false })
   })
 
   it('ignora cliques duplos enquanto um palpite está em andamento', async () => {

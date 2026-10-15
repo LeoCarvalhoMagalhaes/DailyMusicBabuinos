@@ -82,7 +82,7 @@ test('multiplayer: dois jogadores na mesma sala, sincronizados', async ({ browse
   await alice.getByRole('button', { name: 'Tocar trecho 1' }).click()
   await expect(alice.getByRole('button', { name: 'Trecho 2 bloqueado' })).toBeDisabled()
   expect(response.status()).toBe(200)
-  expect(response.headers()['x-clip-duration']).toBe('1.000')
+  expect(response.headers()['x-clip-duration']).toBe('0.500')
 
   const answer = revealRoom(code)
   await submitGuess(alice, answer.title)
