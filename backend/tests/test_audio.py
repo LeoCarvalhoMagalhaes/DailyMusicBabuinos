@@ -86,9 +86,9 @@ def test_trim_real_deezer_layout() -> None:
     header = parse_header(data, 10)
     assert header is not None and header.channel_mode == 1 and header.length == FRAME_LEN + 1
     assert mp3_duration(data) == pytest.approx(30, abs=0.05)
-    for stage in (1, 2, 3, 5, 8, 12):
+    for stage in (0.5, 1, 2, 4, 8, 12, 16):
         clip, duration = trim_mp3(data, stage)
-        # Na prévia real: 1,019 / 2,011 / 3,004 / 5,016 / 8,020 / 12,016 s.
+        # Na prévia real: 1,019 / 2,011 / 3,004 / 5,016 / 8,020 / 12,016 s (e 0,522 / 16,013).
         assert stage <= duration < stage + FRAME_DURATION
         assert not clip.startswith(b"ID3") and clip[:2] == b"\xff\xfb"
         assert b"Xing" not in clip and b"Info" not in clip
@@ -389,7 +389,7 @@ def test_audio_failure_returns_503_and_keeps_attempts(main_harness: Harness,
     fake_provider.fail_clips = False
     ok = main_harness.client.get(f"/api/games/{game['id']}/audio?stage=1", headers=headers)
     assert ok.status_code == 200
-    assert fake_provider.clip_requests == [1.0]
+    assert fake_provider.clip_requests == [0.5]  # primeiro trecho: 0,5 s
 
 
 def test_ttl_cache_evicts_oldest() -> None:

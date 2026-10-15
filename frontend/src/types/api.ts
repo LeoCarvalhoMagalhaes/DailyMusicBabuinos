@@ -50,6 +50,8 @@ export interface GuessEntry {
   text: string
   skipped: boolean
   correct: boolean
+  // Errou, mas a música palpitada é do mesmo artista da resposta (fica amarelo).
+  same_artist?: boolean
 }
 
 export interface Answer {

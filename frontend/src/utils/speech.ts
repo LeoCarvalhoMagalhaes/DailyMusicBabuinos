@@ -15,6 +15,9 @@ export function speech(
   }
   if (game.status === 'lost') return lostLine
   if (feedback?.kind === 'info' || feedback?.kind === 'error') return feedback.text
+  if (feedback?.kind === 'wrong' && feedback.sameArtist) {
+    return `Quase! “${feedback.text}” é do mesmo artista, mas não é essa. Escuta mais um pedaço!`
+  }
   if (feedback?.kind === 'wrong' && game.remaining_attempts > 2) {
     return `Hmm… não é “${feedback.text}”. Escuta mais um pedaço!`
   }

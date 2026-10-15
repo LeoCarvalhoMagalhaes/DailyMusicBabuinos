@@ -11,7 +11,7 @@ export function makeGame(overrides: Partial<GameState> = {}): GameState {
     max_attempts: 6,
     remaining_attempts: 6,
     unlocked_stage: 1,
-    stages_seconds: [1, 2, 3, 5, 8, 12],
+    stages_seconds: [0.5, 1, 2, 4, 8, 16],
     score: 0,
     guesses: [],
     answer: null,

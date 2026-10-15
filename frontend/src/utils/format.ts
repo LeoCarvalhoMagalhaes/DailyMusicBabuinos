@@ -31,7 +31,8 @@ export function formatCountdown(ms: number): string {
 }
 
 export function formatSeconds(value: number): string {
-  return `${Number.isInteger(value) ? value : value.toFixed(1)}s`
+  // Vírgula decimal, como no português: 0,5s.
+  return `${Number.isInteger(value) ? value : value.toFixed(1).replace('.', ',')}s`
 }
 
 export function formatPercent(rate: number): string {

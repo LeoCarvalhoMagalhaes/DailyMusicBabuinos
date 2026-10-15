@@ -1,4 +1,4 @@
-import { Check, SkipForward, X } from 'lucide-react'
+import { Check, MicVocal, SkipForward, X } from 'lucide-react'
 import type { GuessEntry } from '../../types/api'
 import styles from './Attempts.module.css'
 
@@ -32,6 +32,7 @@ export function Attempts({ guesses, maxAttempts, inProgress }: AttemptsProps) {
           let cls = styles.empty
           let content = current ? 'Sua vez — ouça e responda' : ''
           let icon = null
+          let hint: string | null = null
           if (guess?.correct) {
             cls = styles.correct
             content = guess.text
@@ -40,6 +41,12 @@ export function Attempts({ guesses, maxAttempts, inProgress }: AttemptsProps) {
             cls = styles.skipped
             content = 'Pulou'
             icon = <SkipForward size={16} aria-label="Pulou" />
+          } else if (guess?.same_artist) {
+            // Música errada, mas do artista certo: está perto.
+            cls = styles.close
+            content = guess.text
+            hint = 'Mesmo artista!'
+            icon = <MicVocal size={18} aria-label="Errou, mas é do mesmo artista" />
           } else if (guess) {
             cls = styles.wrong
             content = guess.text
@@ -48,7 +55,10 @@ export function Attempts({ guesses, maxAttempts, inProgress }: AttemptsProps) {
           return (
             <li key={i} className={[styles.item, cls, current ? styles.current : ''].join(' ')}>
               <span className={styles.number}>{i + 1}</span>
-              <span className={styles.text}>{content}</span>
+              <span className={styles.text}>
+                {content}
+                {hint && <span className={styles.hint}>{hint}</span>}
+              </span>
               {icon && <span className={styles.icon}>{icon}</span>}
             </li>
           )

@@ -9,6 +9,14 @@ describe('compartilhamento', () => {
 
   it('monta a grade sem revelar a música', () => {
     expect(resultGrid(WON_GAME)).toBe('🟥🟩⬛⬛⬛⬛')
+    const close = makeGame({
+      guesses: [
+        { attempt: 1, text: 'Somebody to Love', skipped: false, correct: false, same_artist: true },
+        { attempt: 2, text: '', skipped: true, correct: false },
+      ],
+    })
+    // Mesmo artista vira amarelo no compartilhamento (sem revelar a música).
+    expect(resultGrid(close)).toBe('🟨⬜⬛⬛⬛⬛')
     const text = shareText(WON_GAME, 'https://musicasbabuinas.example')
     expect(text).toContain('🎸 MÚSICAS BABUÍNAS — DESAFIO DIÁRIO #1')
     expect(text).toContain('Categoria: ROCK')
@@ -78,7 +86,8 @@ describe('formatação', () => {
 
   it('formata segundos', () => {
     expect(formatSeconds(1)).toBe('1s')
-    expect(formatSeconds(1.5)).toBe('1.5s')
+    expect(formatSeconds(1.5)).toBe('1,5s')
+    expect(formatSeconds(0.5)).toBe('0,5s')
   })
 })
 

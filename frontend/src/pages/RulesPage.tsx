@@ -7,7 +7,7 @@ import { usePlayer } from '../hooks/usePlayer'
 import { formatSeconds } from '../utils/format'
 import styles from './TextPage.module.css'
 
-const DEFAULT_STAGES = [1, 2, 3, 5, 8, 12]
+const DEFAULT_STAGES = [0.5, 1, 2, 4, 8, 16]
 const DEFAULT_SCORES = [100, 80, 60, 40, 20, 10]
 
 export function RulesPage() {
@@ -62,8 +62,10 @@ export function RulesPage() {
           <div>
             <h2>Errou ou pulou? Mais música!</h2>
             <p>
-              Cada palpite errado ou pulo usa uma das {max} tentativas e libera um trecho maior.
-              Repetir um palpite já feito não conta.
+              Cada palpite errado ou pulo usa uma das {max} tentativas e libera um trecho com o
+              dobro da duração. Errou a música, mas ela é do <strong>mesmo artista</strong>? A
+              tentativa fica <strong>amarela</strong>: você está perto. Repetir um palpite já
+              feito não conta.
             </p>
           </div>
         </li>

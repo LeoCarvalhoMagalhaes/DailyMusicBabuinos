@@ -78,6 +78,25 @@ describe('GuessInput', () => {
 })
 
 describe('Attempts', () => {
+  it('pinta de amarelo o palpite errado do mesmo artista', () => {
+    render(
+      <Attempts
+        guesses={[
+          { attempt: 1, text: 'We Will Rock You', skipped: false, correct: false, same_artist: true },
+          { attempt: 2, text: 'Hey Jude', skipped: false, correct: false, same_artist: false },
+        ]}
+        maxAttempts={6}
+        inProgress
+      />,
+    )
+    const [close, wrong] = screen.getAllByRole('listitem')
+    expect(close).toHaveClass('close')
+    expect(close).toHaveTextContent('Mesmo artista!')
+    expect(screen.getByLabelText('Errou, mas é do mesmo artista')).toBeInTheDocument()
+    expect(wrong).toHaveClass('wrong')
+    expect(wrong).not.toHaveTextContent('Mesmo artista!')
+  })
+
   it('mostra erros, pulos, acerto e vagas restantes', () => {
     const game = makeGame({
       guesses: [
@@ -117,13 +136,13 @@ describe('AudioPlayer', () => {
   it('libera só os trechos desbloqueados', async () => {
     const user = userEvent.setup()
     const player = fakePlayer()
-    render(<AudioPlayer player={player} stages={[1, 2, 3, 5, 8, 12]} unlocked={2} accent="#f43f5e" finished={false} />)
+    render(<AudioPlayer player={player} stages={[0.5, 1, 2, 4, 8, 16]} unlocked={2} accent="#f43f5e" finished={false} />)
     expect(screen.getByText('Pista 2 de 6')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Ouvir trecho 1 (1s)' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Ouvir trecho 1 (0,5s)' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Trecho 3 bloqueado' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Tocar trecho 2' }))
     expect(player.toggle).toHaveBeenCalledWith(2)
-    await user.click(screen.getByRole('button', { name: 'Ouvir trecho 1 (1s)' }))
+    await user.click(screen.getByRole('button', { name: 'Ouvir trecho 1 (0,5s)' }))
     expect(player.play).toHaveBeenCalledWith(1)
   })
 

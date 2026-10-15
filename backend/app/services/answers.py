@@ -122,6 +122,24 @@ def is_correct(guess: str, title: str, aliases: Iterable[str],
     return False
 
 
+# Separadores de parceria no nome normalizado ("&" vira "and" na normalização).
+_PARTNERSHIP = re.compile(r"\b(?:and|feat|ft|with|x|e)\b")
+
+
+def artist_parts(artist: str) -> set[str]:
+    """Forma normalizada do artista e de cada parte de uma parceria ("A & B")."""
+    full = normalize(artist)
+    parts = {p.strip() for p in _PARTNERSHIP.split(full)}
+    return {full, *(p for p in parts if p)}
+
+
+def same_artist(answer_artist: str, guessed_artists: Iterable[str]) -> bool:
+    """O palpite é de uma música do mesmo artista da resposta? Compara o artista e as
+    partes de parcerias ("Kenny Rogers & Dolly Parton" vale para os dois)."""
+    wanted = artist_parts(answer_artist)
+    return any(artist_parts(a) & wanted for a in guessed_artists)
+
+
 def clean_guess(raw: str) -> str:
     """Limpa o texto enviado: remove controles e espaços repetidos, limita o tamanho."""
     text = "".join(ch for ch in raw if unicodedata.category(ch)[0] != "C")

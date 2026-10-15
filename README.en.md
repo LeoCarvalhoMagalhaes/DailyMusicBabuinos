@@ -18,7 +18,8 @@ Portuguese.
   players with invite codes, 18 songs — 3 per category —, live scoreboard over WebSocket,
   speed bonus, reconnection and final ranking). See
   [06 — Modos de jogo](docs/06-modos-de-jogo.md).
-- **Progressive clues** (1, 2, 3, 5, 8, 12 s — configurable), six attempts, skip button and
+- **Exponential clues** (0.5, 1, 2, 4, 8, 16 s — each doubles the previous; configurable),
+  wrong guesses by the **same artist shown in yellow**, six attempts, skip button and
   100/80/60/40/20/10 scoring.
 - **Server-authoritative:** attempts, validation and scoring run on the backend; the secret
   song never reaches the browser before the game ends; audio is trimmed server-side and
@@ -61,8 +62,8 @@ API with PostgreSQL.
 ## Tests
 
 ```bash
-cd backend && pytest                       # 179 tests (also run on PostgreSQL via TEST_DATABASE_URL)
-cd frontend && npm run typecheck && npm test && npm run e2e   # 37 unit + 18 E2E (desktop & mobile)
+cd backend && pytest                       # 183 tests (also run on PostgreSQL via TEST_DATABASE_URL)
+cd frontend && npm run typecheck && npm test && npm run e2e   # 39 unit + 18 E2E (desktop & mobile)
 ```
 
 ## Documentation (Portuguese)

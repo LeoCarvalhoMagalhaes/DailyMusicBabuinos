@@ -29,11 +29,11 @@ test.describe('Músicas Babuínas', () => {
     await expectNoHorizontalScroll(page)
     const audio = await audioResponse
     expect(audio.status()).toBe(200)
-    expect(audio.headers()['x-clip-duration']).toBe('1.000')
+    expect(audio.headers()['x-clip-duration']).toBe('0.500')
 
     // Toca a primeira pista (o servidor entrega só o trecho liberado).
     await page.getByRole('button', { name: 'Tocar trecho 1' }).click()
-    await expect(page.getByRole('button', { name: 'Ouvir trecho 1 (1s)' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Ouvir trecho 1 (0,5s)' })).toBeEnabled()
     await expect(page.getByRole('button', { name: 'Trecho 2 bloqueado' })).toBeDisabled()
 
     // Autocomplete + palpite errado.
@@ -44,7 +44,7 @@ test.describe('Músicas Babuínas', () => {
     await page.getByRole('button', { name: 'Confirmar' }).click()
     await expect(page.getByRole('listitem').filter({ hasText: wrong })).toBeVisible()
     await expect(page.getByText('5 restantes')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Ouvir trecho 2 (2s)' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Ouvir trecho 2 (1s)' })).toBeEnabled()
 
     // Recarregar mantém a mesma partida e as tentativas usadas.
     await page.reload()
