@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core.categories import CATEGORY_SLUGS
 from app.models import CatalogEntry, CatalogSource, MusicTrack
-from app.services.answers import normalize
+from app.services.answers import normalize, variants
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CATALOG_DIRS = (DATA_DIR / "catalog", DATA_DIR / "demo")
@@ -224,6 +224,14 @@ class CatalogIndex:
 
     def titles(self, db: Session, edition: str) -> list[str]:
         return [t.title for t in self.tracks(db, edition)]
+
+    def artists_for_title(self, db: Session, edition: str, guess: str) -> set[str]:
+        """Artistas (normalizados) das músicas do catálogo cujo título é o palpite.
+        Usado para avisar "mesmo artista" num palpite errado."""
+        forms = variants(guess)
+        if not forms:
+            return set()
+        return {t.norm_artist for t in self.tracks(db, edition) if variants(t.title) & forms}
 
     def search(self, db: Session, edition: str, query: str, limit: int = 8) -> list[IndexedTrack]:
         """Busca por título e artista. A ordenação depende apenas do texto digitado,

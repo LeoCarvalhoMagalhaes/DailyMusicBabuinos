@@ -41,10 +41,11 @@ class Settings(BaseSettings):
     challenge_timezone: str = "America/Sao_Paulo"
     launch_date: date = date(2026, 10, 14)
 
-    # Duração (s) de cada estágio de pista. O número de estágios define o número
-    # de tentativas e precisa coincidir com a tabela de pontuação.
+    # Duração (s) de cada estágio de pista: começa em 0,5 s e dobra a cada estágio
+    # (crescimento exponencial; 16 s cabem nas prévias de ~30 s do Deezer). O número de
+    # estágios define o número de tentativas e precisa coincidir com a tabela de pontuação.
     clip_stages_seconds: Annotated[list[float], NoDecode] = Field(
-        default_factory=lambda: [1, 2, 3, 5, 8, 12]
+        default_factory=lambda: [0.5, 1, 2, 4, 8, 16]
     )
     score_table: Annotated[list[int], NoDecode] = Field(
         default_factory=lambda: [100, 80, 60, 40, 20, 10]

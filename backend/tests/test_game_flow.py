@@ -27,7 +27,8 @@ def test_wrong_guess_consumes_attempt_and_unlocks_next_stage(harness: Harness) -
     assert body["game"]["remaining_attempts"] == 5
     assert body["game"]["unlocked_stage"] == 2
     assert body["game"]["guesses"] == [
-        {"attempt": 1, "text": wrong, "skipped": False, "correct": False}
+        {"attempt": 1, "text": wrong, "skipped": False, "correct": False,
+         "same_artist": False}
     ]
 
 
@@ -199,7 +200,7 @@ def test_daily_overview_reflects_results(harness: Harness) -> None:
     pop = next(c for c in overview["categories"] if c["slug"] == "pop")
     assert pop["status"] == "won" and pop["score"] == 100 and pop["game_id"] == game["id"]
     assert overview["audio"]["demo_mode"] is True
-    assert overview["rules"]["stages_seconds"] == [1, 2, 3, 5, 8, 12]
+    assert overview["rules"]["stages_seconds"] == [0.5, 1, 2, 4, 8, 16]  # dobra a cada estágio
     assert overview["rules"]["score_table"] == [100, 80, 60, 40, 20, 10]
 
 

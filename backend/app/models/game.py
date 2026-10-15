@@ -87,6 +87,8 @@ class GameGuess(Base):
     normalized: Mapped[str] = mapped_column(String(200), default="")
     is_skip: Mapped[bool] = mapped_column(Boolean, default=False)
     is_correct: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Palpite errado, mas de uma música do mesmo artista da resposta (fica amarelo).
+    same_artist: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     game: Mapped[GameSession] = relationship(back_populates="guesses")

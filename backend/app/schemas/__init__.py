@@ -106,6 +106,8 @@ class GuessOut(BaseModel):
     text: str
     skipped: bool
     correct: bool
+    # Errou, mas a música palpitada é do mesmo artista da resposta.
+    same_artist: bool = False
 
 
 class AnswerOut(BaseModel):

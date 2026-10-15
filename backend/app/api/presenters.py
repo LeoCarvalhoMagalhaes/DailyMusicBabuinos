@@ -56,7 +56,7 @@ def game_state(game: GameSession, settings: Settings, provider: AudioProvider,
         speed_bonus=game.speed_bonus,
         guesses=[
             GuessOut(attempt=g.attempt_number, text=g.guess_text, skipped=g.is_skip,
-                     correct=g.is_correct)
+                     correct=g.is_correct, same_artist=bool(g.same_artist))
             for g in game.guesses
         ],
         answer=answer_out(game, provider),

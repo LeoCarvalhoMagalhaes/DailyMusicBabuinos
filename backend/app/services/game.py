@@ -165,10 +165,14 @@ def apply_guess(db: Session, settings: Settings, game: GameSession, raw_guess: s
     if any(g.normalized == normalized and not g.is_skip for g in game.guesses):
         raise ConflictError("Você já tentou essa! Escolha outra música.", code="duplicate_guess")
     track = game.track
-    others = catalog_index.titles(db, settings.catalog_edition)
+    edition = settings.catalog_edition
+    others = catalog_index.titles(db, edition)
     correct = answers.is_correct(text, track.title, track.aliases, others)
+    # Errou, mas a música palpitada é do mesmo artista: a tentativa fica amarela.
+    close = not correct and answers.same_artist(
+        track.artist, catalog_index.artists_for_title(db, edition, text))
     guess = GameGuess(guess_text=text, normalized=normalized[:200], is_skip=False,
-                      is_correct=correct)
+                      is_correct=correct, same_artist=close)
     _register(db, settings, game, guess, now, commit=commit)
     return correct
 

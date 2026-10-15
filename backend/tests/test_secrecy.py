@@ -49,7 +49,7 @@ def test_audio_respects_unlocked_stage(harness: Harness) -> None:
     url = f"/api/games/{game['id']}/audio"
     ok = harness.client.get(f"{url}?stage=1", headers=headers)
     assert ok.status_code == 200
-    assert float(ok.headers["X-Clip-Duration"]) == 1.0
+    assert float(ok.headers["X-Clip-Duration"]) == 0.5
     assert ok.headers["Cache-Control"] == "no-store"
     for stage in (2, 6):
         locked = harness.client.get(f"{url}?stage={stage}", headers=headers)
@@ -59,7 +59,7 @@ def test_audio_respects_unlocked_stage(harness: Harness) -> None:
     harness.client.post(f"/api/games/{game['id']}/skip", json={"attempt": 1}, headers=headers)
     stage2 = harness.client.get(f"{url}?stage=2", headers=headers)
     assert stage2.status_code == 200
-    assert float(stage2.headers["X-Clip-Duration"]) == 2.0
+    assert float(stage2.headers["X-Clip-Duration"]) == 1.0
 
 
 def test_audio_payload_has_no_metadata(harness: Harness) -> None:
@@ -72,7 +72,7 @@ def test_audio_payload_has_no_metadata(harness: Harness) -> None:
     assert b"LIST" not in data and b"ID3" not in data
     assert secret.title.encode() not in data
     samples, rate, channels = decode_wav(data)
-    assert channels == 1 and len(samples) == rate * 1
+    assert channels == 1 and len(samples) == rate // 2  # 0,5 s
 
 
 def test_finished_game_unlocks_every_stage(harness: Harness) -> None:
@@ -81,7 +81,7 @@ def test_finished_game_unlocks_every_stage(harness: Harness) -> None:
     harness.guess(headers, game, harness.secret().title)
     response = harness.client.get(f"/api/games/{game['id']}/audio?stage=6", headers=headers)
     assert response.status_code == 200
-    assert float(response.headers["X-Clip-Duration"]) == 12.0
+    assert float(response.headers["X-Clip-Duration"]) == 16.0
 
 
 def test_search_does_not_depend_on_the_answer(harness: Harness) -> None:
