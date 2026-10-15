@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.audio.base import AudioProvider
@@ -118,15 +119,17 @@ def next_round(db: Session, settings: Settings, provider: AudioProvider, player:
     track = pick_track(db, settings, provider, category, avoid, recent)
     game = new_session(player.id, track.id, category, MODE_ENDLESS, now, run_id=run)
     db.add(game)
-    db.commit()
-    # Duas requisições simultâneas (duplo clique, duas abas) podem criar duas rodadas.
-    # Fica só a mais antiga; a escolha é determinística, então as duas concordam.
-    open_rounds = _open_rounds(db, player.id, category)
-    for extra in open_rounds[1:]:
-        if extra.attempts_used == 0:
-            db.delete(extra)
-    db.commit()
-    return open_rounds[0]
+    try:
+        db.commit()
+    except IntegrityError:
+        # Outra requisição simultânea (duplo clique, duas abas) abriu a rodada primeiro:
+        # o índice único parcial do banco só permite uma aberta por categoria.
+        db.rollback()
+        current = _open_rounds(db, player.id, category)
+        if not current:  # pragma: no cover - estado impossível
+            raise
+        return current[0]
+    return game
 
 
 @dataclass

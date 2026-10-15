@@ -142,3 +142,32 @@ def test_track_slug_treats_curly_and_straight_apostrophes_alike() -> None:
     # A lista global do kworb usa "Don’t", a página da artista usa "Don't".
     assert track_slug("Dua Lipa", "Don’t Start Now") == track_slug("Dua Lipa", "Don't Start Now")
     assert track_slug("Dua Lipa", "Don't Start Now") == "dua-lipa--don-t-start-now"
+
+
+def test_ping_does_not_touch_the_database(harness) -> None:
+    from sqlalchemy import event
+
+    statements: list[str] = []
+    event.listen(harness.app.state.engine, "before_cursor_execute",
+                 lambda *args: statements.append(args[2]))
+    response = harness.client.get("/api/ping")
+    assert response.status_code == 200 and response.json() == {"status": "ok"}
+    assert statements == []
+
+
+def test_game_requests_use_few_queries(main_harness) -> None:
+    """Cada consulta é uma viagem até o banco; o palpite e o áudio ficam enxutos."""
+    from sqlalchemy import event
+
+    h = main_harness
+    headers = h.new_player()
+    game = h.start(headers, "rock")
+    h.guess(headers, game, "Aquecimento Do Indice", 1)  # carrega o índice do catálogo
+    statements: list[str] = []
+    event.listen(h.app.state.engine, "before_cursor_execute",
+                 lambda *args: statements.append(args[2]))
+    h.guess(headers, {**game, "attempts_used": 1}, "Outra Musica Errada", 2)
+    assert len(statements) <= 6, statements
+    statements.clear()
+    h.client.get(f"/api/games/{game['id']}/audio?stage=1", headers=headers)
+    assert len(statements) <= 2, statements

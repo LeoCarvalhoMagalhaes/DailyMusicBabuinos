@@ -3,7 +3,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ApiError, api, setApiToken } from '../services/api'
+import { ApiError, api, setApiToken, setPlayerRejectedHandler } from '../services/api'
 import { STORAGE_KEYS, readString, removeKey, writeString } from '../services/storage'
 
 interface PlayerContextValue {
@@ -29,21 +29,38 @@ function ensurePlayer(): Promise<void> {
 async function identify(): Promise<void> {
   const saved = readString(STORAGE_KEYS.token)
   if (saved) {
+    // Usa o token salvo direto: sem a viagem extra de conferência a cada página.
     setApiToken(saved)
-    try {
-      await api.me()
-      return
-    } catch (error) {
-      // Token desconhecido pelo servidor (ex.: banco recriado): gera um novo.
-      if (!(error instanceof ApiError) || error.status !== 401) throw error
-      removeKey(STORAGE_KEYS.token)
-      setApiToken(null)
-    }
+    return
   }
+  await createIdentity()
+}
+
+async function createIdentity(): Promise<void> {
   const created = await api.createPlayer()
   writeString(STORAGE_KEYS.token, created.token)
   setApiToken(created.token)
 }
+
+// Token recusado pelo servidor (ex.: banco recriado): cria um jogador novo uma única
+// vez, mesmo que várias chamadas tenham sido recusadas ao mesmo tempo.
+let pendingRenewal: Promise<boolean> | null = null
+
+setPlayerRejectedHandler(() => {
+  pendingRenewal ??= (async () => {
+    removeKey(STORAGE_KEYS.token)
+    setApiToken(null)
+    try {
+      await createIdentity()
+      return true
+    } catch {
+      return false
+    } finally {
+      window.setTimeout(() => (pendingRenewal = null), 0)
+    }
+  })()
+  return pendingRenewal
+})
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)

@@ -13,11 +13,12 @@ test.describe('Modos de jogo', () => {
 
   test('modo ilimitado: rodadas seguidas sem mexer no diário', async ({ page }) => {
     await page.goto('/ilimitado')
+    // O trecho 1 é pré-carregado assim que a rodada aparece: escuta desde já.
+    const audio = page.waitForResponse((r) => r.url().includes('/audio?stage=1'))
     await page.getByTestId('endless-rock').click()
     await expect(page.getByRole('heading', { name: 'Rodada 1' })).toBeVisible()
-    const audio = page.waitForResponse((r) => r.url().includes('/audio?stage=1'))
-    await page.getByRole('button', { name: 'Tocar trecho 1' }).click()
     expect((await audio).status()).toBe(200)
+    await page.getByRole('button', { name: 'Tocar trecho 1' }).click()
     await expectNoHorizontalScroll(page)
 
     // Desiste da rodada: a resposta aparece e dá para seguir para a próxima.

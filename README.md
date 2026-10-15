@@ -101,11 +101,11 @@ python -m app.cli purge-inactive --days 400  # retenção de dados
 ## Testes
 
 ```bash
-cd backend && pytest                                   # 183 testes (SQLite; 1 só com DEEZER_LIVE=1)
+cd backend && pytest                                   # 185 testes (SQLite; 1 só com DEEZER_LIVE=1)
 TEST_DATABASE_URL=postgresql://user:senha@localhost:5432/babuinos_test pytest   # mesmos testes no PostgreSQL
 
 cd frontend
-npm run typecheck && npm test                          # 39 testes Vitest
+npm run typecheck && npm test                          # 41 testes Vitest
 npx playwright install chromium                        # uma vez
 npm run e2e                                            # 18 testes E2E (desktop + celular)
 E2E_WEBKIT=1 npm run e2e                               # + 9 no WebKit (iPhone); antes: npx playwright install webkit

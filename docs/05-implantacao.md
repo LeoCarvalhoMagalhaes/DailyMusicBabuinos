@@ -100,6 +100,26 @@ WebSocket "Ao vivo" nos dois, mesma resposta revelada para ambos e rodada 2 aber
 servidor; nenhum erro de console. O teste criou as contas `teste_claude_a` e
 `teste_claude_b` (podem ficar ou ser removidas do banco).
 
+## Velocidade (servidor nos EUA, jogadores no Brasil)
+
+Medido do Brasil em 15/10/2026, com a API acordada: conexão ~20 ms (a borda do Render fica
+no Brasil), `/api/daily` ~250 ms, `/api/health` ~400 ms e trecho de áudio ~550 ms.
+
+- **Região:** o Render não tem região na América do Sul (Oregon, Ohio, Virgínia, Frankfurt e
+  Singapura). O Neon tem São Paulo (`aws-sa-east-1`), mas o banco precisa ficar na **mesma
+  região da API** (Ohio = `aws-us-east-2`), senão cada consulta paga uma viagem extra.
+  Hospedar a API no Brasil exige provedores com cartão (ex.: Fly.io `gru`, Cloud Run
+  `southamerica-east1`).
+- **Hibernação:** a maior espera é a API gratuita acordando (~1 min após 15 min parada).
+  Para evitar, cadastre um monitor gratuito apontando para **`/api/ping`**, que não usa o
+  banco, a cada 10 minutos (ex.: UptimeRobot → *New monitor* → HTTP(s) →
+  `https://dailymusicbabuinos.onrender.com/api/ping` → intervalo 10 min). Uma instância
+  ligada o mês todo cabe nas 750 h gratuitas do Render. Não use `/api/health` no monitor:
+  ele consulta o banco e manteria o Neon acordado, gastando as horas gratuitas dele.
+- **Menos viagens por jogada:** o site usa o token salvo direto (sem conferir a cada página),
+  já abre a conexão com a API enquanto carrega (`preconnect`) e a API carrega a partida com
+  a música, o desafio e os palpites de uma vez (palpite: 6 consultas; áudio: 2).
+
 ## Passo a passo — GitHub Pages + Render (Blueprint)
 
 1. **API no Render:** entre em <https://render.com> com a conta do GitHub, escolha

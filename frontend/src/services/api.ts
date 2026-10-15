@@ -51,6 +51,15 @@ export function getAccountToken(): string | null {
   return accountToken
 }
 
+// O token anônimo salvo é usado direto, sem conferir antes (economiza uma viagem ao
+// servidor a cada página). Se o servidor o recusar (ex.: banco recriado), este
+// tratador cria um jogador novo e a chamada é repetida uma vez.
+let onPlayerRejected: (() => Promise<boolean>) | null = null
+
+export function setPlayerRejectedHandler(handler: (() => Promise<boolean>) | null): void {
+  onPlayerRejected = handler
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST'
   body?: unknown
@@ -93,15 +102,24 @@ async function toError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, 'http_error', 'O servidor tropeçou no cabo. Tente de novo.')
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function sendWithRecovery(path: string, options: RequestOptions): Promise<Response> {
   const response = await send(path, options)
+  const usesPlayer = options.auth !== false && !options.account && token !== null
+  if (response.status === 401 && usesPlayer && onPlayerRejected && (await onPlayerRejected())) {
+    return send(path, options)
+  }
+  return response
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await sendWithRecovery(path, options)
   if (!response.ok) throw await toError(response)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
 async function clip(path: string, options: RequestOptions): Promise<AudioPayload> {
-  const response = await send(path, options)
+  const response = await sendWithRecovery(path, options)
   if (!response.ok) throw await toError(response)
   const duration = Number(response.headers.get('X-Clip-Duration') ?? '0')
   return { blob: await response.blob(), duration }
